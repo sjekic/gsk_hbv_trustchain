@@ -7,6 +7,7 @@ from ..services.demo_data import (
     create_prototype_patient,
     create_prototype_submission,
     get_export_anonymization_status,
+    get_hbsag_trajectory,
     get_prototype_dashboard,
     get_prototype_patients,
     get_prototype_submissions,
@@ -620,6 +621,26 @@ def check_export_anonymization(
         permit_id=permit["permit_id"],
     )
     return result
+
+@router.get("/analytics/hbsag-trajectory")
+def hbsag_trajectory(user: AuthenticatedUser = Depends(get_current_user)):
+    permit_gate = _build_permit_gate()
+    if permit_gate["restricted"]:
+        raise HTTPException(
+            status_code=403,
+            detail="No active EHDS-style data access permit is registered.",
+        )
+    result = get_hbsag_trajectory()
+    log_access_event(
+        user=user,
+        action="read_hbsag_trajectory",
+        resource_type="analytics",
+        resource_id="hbsag_trajectory",
+        decision="allowed",
+        permit_id=permit_gate["active_permit"]["permit_id"],
+    )
+    return result
+
 
 @router.get("/ledger/chain-integrity")
 def ledger_chain_integrity(user: AuthenticatedUser = Depends(get_current_user)):

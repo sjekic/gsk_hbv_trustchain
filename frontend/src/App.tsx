@@ -11,6 +11,7 @@ import {
   BarChart,
   Bar,
   CartesianGrid,
+  Legend,
   LineChart,
   Line,
   Tooltip,
@@ -45,6 +46,7 @@ type LedgerEntry = {
   submission_id?: string;
   patient_id?: string;
   visit_id?: string;
+  omop_domain?: string;
 };
 
 type MetricPoint = { name: string; score: number };
@@ -117,6 +119,16 @@ type PermitGate = {
   active_permit: PermitRecord | null;
 };
 
+type ExportGate = {
+  eligible_patients: number;
+  opted_out_patients: number;
+  k_threshold: number;
+  passed: boolean;
+  message: string;
+  smallest_cell: number;
+  failing_cells: { cell: string; count: number }[];
+};
+
 type DashboardPayload = {
   prototype: {
     name: string;
@@ -128,6 +140,7 @@ type DashboardPayload = {
   source_feeds: SourceFeed[];
   omop_etl: OmopEtlSummary;
   permit_gate: PermitGate;
+  export_gate: ExportGate;
   data_lifecycle: LifecycleStage[];
   ledger: LedgerEntry[];
   quality: {
@@ -418,6 +431,15 @@ const fallbackData: DashboardPayload = {
     banner: 'No active permit',
     active_permit: null,
   },
+  export_gate: {
+    eligible_patients: 0,
+    opted_out_patients: 0,
+    k_threshold: 5,
+    passed: false,
+    message: 'No data available.',
+    smallest_cell: 0,
+    failing_cells: [],
+  },
   data_lifecycle: [],
   ledger: [],
   quality: {
@@ -485,6 +507,10 @@ function App() {
   const [tamperResult, setTamperResult] = useState('');
   const [consentForm, setConsentForm] = useState<ConsentFormState>(initialConsentForm);
   const [savingConsent, setSavingConsent] = useState(false);
+  const [hbsagTrajectory, setHbsagTrajectory] = useState<
+    { name: string; mean_hbsag: number; bwell_ref: number }[]
+  >([]);
+  const [hbsagPatientCount, setHbsagPatientCount] = useState(0);
 
 
   const loadAll = async () => {
@@ -524,6 +550,20 @@ function App() {
     }
     const patientsPayload = (await patientsResponse.json()) as { items: Patient[] };
     setPatients(patientsPayload.items);
+
+    try {
+      const trajResponse = await fetch(`${API_BASE}/prototype/analytics/hbsag-trajectory`);
+      if (trajResponse.ok) {
+        const trajPayload = (await trajResponse.json()) as {
+          trajectory: { name: string; mean_hbsag: number; bwell_ref: number }[];
+          patient_count: number;
+        };
+        setHbsagTrajectory(trajPayload.trajectory);
+        setHbsagPatientCount(trajPayload.patient_count);
+      }
+    } catch {
+      // trajectory is optional, don't block dashboard
+    }
   };
 
   useEffect(() => {
@@ -1905,6 +1945,63 @@ function App() {
           <section className="section">
             <div className="section-header">
               <div>
+                <h2>Export anonymisation gate</h2>
+                <p className="section-copy">
+                  Before result export, the prototype enforces k-anonymity and opt-out filtering.
+                </p>
+              </div>
+            </div>
+            <div className="panel">
+              <div className="feed-meta">
+                <div className="feed-meta-row">
+                  <span>Status</span>
+                  <strong>
+                    <span className={`status-chip ${data.export_gate.passed ? 'verified' : 'tampered'}`}>
+                      {data.export_gate.passed ? 'PASS' : 'FAIL'}
+                    </span>
+                  </strong>
+                </div>
+                <div className="feed-meta-row">
+                  <span>Eligible patients</span>
+                  <strong>{data.export_gate.eligible_patients}</strong>
+                </div>
+                <div className="feed-meta-row">
+                  <span>Opted out</span>
+                  <strong>{data.export_gate.opted_out_patients}</strong>
+                </div>
+                <div className="feed-meta-row">
+                  <span>k-anonymity threshold</span>
+                  <strong>{data.export_gate.k_threshold}</strong>
+                </div>
+                <div className="feed-meta-row">
+                  <span>Reason</span>
+                  <strong>{data.export_gate.message}</strong>
+                </div>
+              </div>
+              <div className="action-row">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${API_BASE}/prototype/export/check-anonymization`);
+                      if (!res.ok) throw new Error(`Status ${res.status}`);
+                      const result = (await res.json()) as ExportGate;
+                      setData((prev) => ({ ...prev, export_gate: result }));
+                    } catch {
+                      setNotice('Export eligibility check failed.');
+                    }
+                  }}
+                >
+                  Check export eligibility
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="section">
+            <div className="section-header">
+              <div>
                 <h2>Challenge focus</h2>
                 <p className="section-copy">
                   The prototype now demonstrates both dataset intake and structured HBV patient
@@ -2208,6 +2305,7 @@ function App() {
                     <tr>
                       <th>Block</th>
                       <th>Artifact</th>
+                      <th>OMOP domain</th>
                       <th>Event</th>
                       <th>Artifact hash</th>
                       <th>Prev hash</th>
@@ -2221,6 +2319,13 @@ function App() {
                       <tr key={entry.block}>
                         <td>{entry.block}</td>
                         <td>{entry.artifact}</td>
+                        <td>
+                          {entry.omop_domain ? (
+                            <span className="badge" style={{ fontSize: '0.75rem', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>
+                              {entry.omop_domain}
+                            </span>
+                          ) : '—'}
+                        </td>
                         <td>{entry.event}</td>
                         <td className="mono">{entry.hash.slice(0, 18)}...</td>
                         <td className="mono">
@@ -2508,6 +2613,48 @@ function App() {
                     ) : null}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </section>
+
+          <section className="section">
+            <div className="panel chart-panel">
+              <div className="section-header compact">
+                <div>
+                  <h2>HBsAg treatment trajectory</h2>
+                  <p className="section-copy">
+                    Mean quantitative HBsAg (IU/mL) across visit stages vs. B-Well trial reference.
+                    {hbsagPatientCount > 0 ? ` Based on ${hbsagPatientCount} patient(s).` : ''}
+                  </p>
+                </div>
+              </div>
+              <div className="chart-wrap">
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={hbsagTrajectory}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis scale="log" domain={['auto', 'auto']} allowDataOverflow />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="mean_hbsag"
+                      name="Cohort mean"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="bwell_ref"
+                      name="B-Well trial reference"
+                      stroke="#f97316"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </section>

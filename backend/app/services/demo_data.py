@@ -107,6 +107,20 @@ def _next_block_number(ledger: list[dict[str, Any]]) -> int:
     return max(int(item["block"]) for item in ledger) + 1
 
 
+def _omop_domain(artifact: str) -> str:
+    if artifact.startswith("patient_"):
+        return "CONDITION_OCCURRENCE + MEASUREMENT"
+    elif artifact.startswith("visit_"):
+        return "MEASUREMENT + OBSERVATION"
+    elif artifact.startswith("consent_"):
+        return "OBSERVATION"
+    elif artifact.startswith("permit_"):
+        return "NOTE"
+    else:
+        # Dataset submissions use source_type prefixes (ehr_, laboratory_, etc.)
+        return "VISIT_OCCURRENCE"
+
+
 def _append_ledger_entry(
     store: dict[str, Any],
     *,
@@ -140,6 +154,7 @@ def _append_ledger_entry(
     # The block_hash commits to ALL fields above — any tampering breaks the chain
     block_content["block_hash"] = _sha256_text(_canonical_json(block_content))
     block_content["status"] = "verified"
+    block_content["omop_domain"] = _omop_domain(artifact)
 
     if extra_fields:
         block_content.update(extra_fields)
@@ -633,6 +648,44 @@ def _build_export_gate(patients: list[dict[str, Any]]) -> dict[str, Any]:
 def get_export_anonymization_status() -> dict[str, Any]:
     store = _load_store()
     return _build_export_gate(store["patients"])
+
+
+def get_hbsag_trajectory() -> dict[str, Any]:
+    store = _load_store()
+    patients = store["patients"]
+
+    visit_order = [
+        "baseline", "week4", "week8", "week12", "week24",
+        "post_week4", "post_week8", "post_week12", "post_week24",
+    ]
+    bwell_ref = {
+        "baseline": 2800, "week4": 1200, "week8": 600, "week12": 200,
+        "week24": 48, "post_week4": 45, "post_week8": 42,
+        "post_week12": 40, "post_week24": 38,
+    }
+
+    grouped: dict[str, list[float]] = {stage: [] for stage in visit_order}
+    for patient in patients:
+        for visit in patient.get("visits", []):
+            vt = visit.get("visit_type", "")
+            hbsag = visit.get("hbsag_iuml") or visit.get("quantitative_hbsag")
+            if vt in grouped and hbsag is not None:
+                grouped[vt].append(float(hbsag))
+
+    trajectory = []
+    for stage in visit_order:
+        values = grouped[stage]
+        mean_val = round(sum(values) / len(values), 2) if values else 0.0
+        trajectory.append({
+            "name": stage,
+            "mean_hbsag": mean_val,
+            "bwell_ref": bwell_ref[stage],
+        })
+
+    return {
+        "trajectory": trajectory,
+        "patient_count": len(patients),
+    }
 
 
 def create_prototype_submission(
@@ -1194,6 +1247,12 @@ def get_prototype_dashboard() -> dict[str, Any]:
             "No open findings. Current eligible dataset, patient, and visit records pass configured checks."
         )
 
+    _bepirovirsen_patients = [p for p in patients if any(v.get("started_bepirovirsen") for v in p.get("visits", []))]
+    _functional_cure_patients = [p for p in _bepirovirsen_patients if any(v.get("functional_cure_endpoint") for v in p.get("visits", []))]
+    _bepi_count = len(_bepirovirsen_patients)
+    _functional_cures = len(_functional_cure_patients)
+    _cure_rate = (_functional_cures / _bepi_count * 100) if _bepi_count else 0.0
+
     has_quality_findings = bool(
         unsigned_sites
         or missing_baseline_hbsag
@@ -1291,6 +1350,11 @@ def get_prototype_dashboard() -> dict[str, Any]:
                 "label": "Trials / RWE readiness",
                 "value": f"{avg_readiness:.1f}%",
                 "note": "Average readiness across current eligible prototype artifacts",
+            },
+            {
+                "label": "Functional cure rate",
+                "value": f"{_cure_rate:.1f}%",
+                "note": f"{_functional_cures}/{_bepi_count} bepirovirsen patients \u00b7 B-Well primary endpoint",
             },
         ],
         "source_feeds": source_feeds,
