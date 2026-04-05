@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.orm import Session
 
 from ..config import settings
+from ..db import get_db
+from ..models import LedgerBlock
 from ..security import AuthenticatedUser, get_current_user, list_demo_users, require_roles
 from ..services.demo_data import (
     create_patient_visit,
@@ -11,9 +14,11 @@ from ..services.demo_data import (
     get_prototype_dashboard,
     get_prototype_patients,
     get_prototype_submissions,
+    verify_chain_integrity,
     verify_patient_integrity,
     verify_submission_integrity,
     verify_visit_integrity,
+    _ledger_to_dict,
 )
 from ..services.governance import (
     create_consent_record,
@@ -29,8 +34,8 @@ from ..services.governance import (
 router = APIRouter(prefix="/prototype", tags=["prototype"])
 
 
-def _build_permit_gate() -> dict:
-    active_permit = get_active_permit()
+def _build_permit_gate(db: Session) -> dict:
+    active_permit = get_active_permit(db)
     if active_permit:
         return {
             "restricted": False,
@@ -45,15 +50,17 @@ def _build_permit_gate() -> dict:
 
 
 def _require_active_permit(
+    db: Session,
     *,
     user: AuthenticatedUser,
     action: str,
     resource_type: str,
     resource_id: str,
 ) -> dict:
-    permit = get_active_permit()
+    permit = get_active_permit(db)
     if permit is None:
         log_access_event(
+            db,
             user=user,
             action=action,
             resource_type=resource_type,
@@ -62,6 +69,7 @@ def _require_active_permit(
             detail="No active data access permit",
             permit_id=None,
         )
+        db.commit()
         raise HTTPException(
             status_code=403,
             detail="No active EHDS-style data access permit is registered.",
@@ -158,16 +166,20 @@ def get_permits(
     user: AuthenticatedUser = Depends(
         require_roles("clinician", "data_steward", "site_admin", "auditor")
     ),
+    db: Session = Depends(get_db),
 ):
     log_access_event(
+        db,
         user=user,
         action="list_permits",
         resource_type="permit",
         resource_id="all",
         decision="allowed",
-        permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+        permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
     )
-    return {"items": list_permits(), "active_permit": get_active_permit()}
+    result = {"items": list_permits(db), "active_permit": get_active_permit(db)}
+    db.commit()
+    return result
 
 
 @router.post("/permits")
@@ -181,9 +193,11 @@ def create_permit(
     user: AuthenticatedUser = Depends(
         require_roles("clinician", "data_steward", "site_admin")
     ),
+    db: Session = Depends(get_db),
 ):
     try:
         record = create_permit_record(
+            db,
             user=user,
             permit_id=permit_id,
             requesting_organization=requesting_organization,
@@ -196,6 +210,7 @@ def create_permit(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     log_access_event(
+        db,
         user=user,
         action="create_permit",
         resource_type="permit",
@@ -204,6 +219,7 @@ def create_permit(
         permit_id=record["permit_id"],
     )
 
+    db.commit()
     return {
         "message": "Data access permit stored and activated.",
         "record": record,
@@ -211,11 +227,15 @@ def create_permit(
 
 
 @router.get("/dashboard")
-def prototype_dashboard(user: AuthenticatedUser = Depends(get_current_user)):
-    permit_gate = _build_permit_gate()
+def prototype_dashboard(
+    user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    permit_gate = _build_permit_gate(db)
 
     if permit_gate["restricted"]:
         log_access_event(
+            db,
             user=user,
             action="read_dashboard",
             resource_type="dashboard",
@@ -224,14 +244,16 @@ def prototype_dashboard(user: AuthenticatedUser = Depends(get_current_user)):
             detail="No active data access permit",
             permit_id=None,
         )
+        db.commit()
         payload = _restricted_dashboard_payload()
         payload["permit_gate"] = permit_gate
         return payload
 
-    payload = get_prototype_dashboard()
+    payload = get_prototype_dashboard(db)
     payload["permit_gate"] = permit_gate
 
     log_access_event(
+        db,
         user=user,
         action="read_dashboard",
         resource_type="dashboard",
@@ -240,18 +262,24 @@ def prototype_dashboard(user: AuthenticatedUser = Depends(get_current_user)):
         detail=f"permit={permit_gate['active_permit']['permit_id']}",
         permit_id=permit_gate["active_permit"]["permit_id"],
     )
+    db.commit()
     return payload
 
 
 @router.get("/submissions")
-def list_submissions(user: AuthenticatedUser = Depends(get_current_user)):
+def list_submissions(
+    user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     permit = _require_active_permit(
+        db,
         user=user,
         action="list_submissions",
         resource_type="submission",
         resource_id="all",
     )
     log_access_event(
+        db,
         user=user,
         action="list_submissions",
         resource_type="submission",
@@ -259,7 +287,9 @@ def list_submissions(user: AuthenticatedUser = Depends(get_current_user)):
         decision="allowed",
         permit_id=permit["permit_id"],
     )
-    return {"items": get_prototype_submissions()}
+    result = {"items": get_prototype_submissions(db)}
+    db.commit()
+    return result
 
 
 @router.post("/submissions")
@@ -281,6 +311,7 @@ async def create_submission(
     user: AuthenticatedUser = Depends(
         require_roles("clinician", "data_steward", "site_admin")
     ),
+    db: Session = Depends(get_db),
 ):
     file_bytes = None
     file_name = None
@@ -290,6 +321,7 @@ async def create_submission(
         file_bytes = await file.read()
 
     submission, ledger_entry = create_prototype_submission(
+        db,
         site_name=site_name,
         source_type=source_type,
         country=country,
@@ -308,15 +340,17 @@ async def create_submission(
     )
 
     log_access_event(
+        db,
         user=user,
         action="create_submission",
         resource_type="submission",
         resource_id=submission["id"],
         decision="allowed",
         detail=f"block={ledger_entry['block']}",
-        permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+        permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
     )
 
+    db.commit()
     return {
         "message": "Submission stored and anchored in the simulated ledger.",
         "submission": submission,
@@ -328,15 +362,18 @@ async def create_submission(
 def verify_submission(
     submission_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     permit = _require_active_permit(
+        db,
         user=user,
         action="verify_submission",
         resource_type="submission",
         resource_id=submission_id,
     )
-    result = verify_submission_integrity(submission_id)
+    result = verify_submission_integrity(db, submission_id)
     log_access_event(
+        db,
         user=user,
         action="verify_submission",
         resource_type="submission",
@@ -344,6 +381,7 @@ def verify_submission(
         decision="allowed" if result.get("verified") else "warning",
         permit_id=permit["permit_id"],
     )
+    db.commit()
     return result
 
 
@@ -352,16 +390,20 @@ def get_consents(
     user: AuthenticatedUser = Depends(
         require_roles("clinician", "data_steward", "site_admin", "auditor")
     ),
+    db: Session = Depends(get_db),
 ):
     log_access_event(
+        db,
         user=user,
         action="list_consents",
         resource_type="consent",
         resource_id="all",
         decision="allowed",
-        permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+        permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
     )
-    return {"items": list_consents()}
+    result = {"items": list_consents(db)}
+    db.commit()
+    return result
 
 
 @router.post("/consents")
@@ -377,8 +419,10 @@ def create_consent(
     user: AuthenticatedUser = Depends(
         require_roles("clinician", "data_steward", "site_admin")
     ),
+    db: Session = Depends(get_db),
 ):
     record = create_consent_record(
+        db,
         user=user,
         patient_pseudonym=patient_pseudonym,
         legal_basis=legal_basis,
@@ -391,14 +435,16 @@ def create_consent(
     )
 
     log_access_event(
+        db,
         user=user,
         action="create_consent",
         resource_type="consent",
         resource_id=record["id"],
         decision="allowed",
-        permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+        permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
     )
 
+    db.commit()
     return {
         "message": "Governance basis record stored.",
         "record": record,
@@ -408,19 +454,27 @@ def create_consent(
 @router.get("/access-audit")
 def access_audit(
     user: AuthenticatedUser = Depends(require_roles("data_steward", "site_admin", "auditor")),
+    db: Session = Depends(get_db),
 ):
-    return {"items": list_access_audit()}
+    result = {"items": list_access_audit(db)}
+    db.commit()
+    return result
 
 
 @router.get("/patients")
-def list_patients(user: AuthenticatedUser = Depends(get_current_user)):
+def list_patients(
+    user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     permit = _require_active_permit(
+        db,
         user=user,
         action="list_patients",
         resource_type="patient",
         resource_id="all",
     )
     log_access_event(
+        db,
         user=user,
         action="list_patients",
         resource_type="patient",
@@ -428,7 +482,9 @@ def list_patients(user: AuthenticatedUser = Depends(get_current_user)):
         decision="allowed",
         permit_id=permit["permit_id"],
     )
-    return {"items": get_prototype_patients()}
+    result = {"items": get_prototype_patients(db)}
+    db.commit()
+    return result
 
 
 @router.post("/patients")
@@ -455,19 +511,22 @@ def create_patient(
     inr: float | None = Form(None),
     notes: str = Form(""),
     user: AuthenticatedUser = Depends(require_roles("clinician", "site_admin")),
+    db: Session = Depends(get_db),
 ):
     if settings.consent_required_for_patient_write and not has_active_governance_record_for_pseudonym(
-        patient_pseudonym
+        db, patient_pseudonym
     ):
         log_access_event(
+            db,
             user=user,
             action="create_patient",
             resource_type="patient",
             resource_id=patient_pseudonym,
             decision="blocked",
             detail="Missing active governance basis record",
-            permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+            permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
         )
+        db.commit()
         raise HTTPException(
             status_code=403,
             detail=(
@@ -477,6 +536,7 @@ def create_patient(
         )
 
     patient, ledger_entry = create_prototype_patient(
+        db,
         site_name=site_name,
         country=country,
         operator_id=operator_id,
@@ -501,15 +561,17 @@ def create_patient(
     )
 
     log_access_event(
+        db,
         user=user,
         action="create_patient",
         resource_type="patient",
         resource_id=patient["id"],
         decision="allowed",
         detail=f"block={ledger_entry['block']}",
-        permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+        permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
     )
 
+    db.commit()
     return {
         "message": "Patient baseline record stored and anchored in the simulated ledger.",
         "patient": patient,
@@ -536,25 +598,28 @@ def create_visit(
     functional_cure_endpoint: bool = Form(False),
     notes: str = Form(""),
     user: AuthenticatedUser = Depends(require_roles("clinician", "site_admin")),
+    db: Session = Depends(get_db),
 ):
-    patients = get_prototype_patients()
+    patients = get_prototype_patients(db)
     patient = next((item for item in patients if item["id"] == patient_id), None)
 
     if patient is None:
         raise HTTPException(status_code=404, detail="Patient not found.")
 
     if settings.consent_required_for_patient_write and not has_active_governance_record_for_pseudonym(
-        patient["patient_pseudonym"]
+        db, patient["patient_pseudonym"]
     ):
         log_access_event(
+            db,
             user=user,
             action="create_visit",
             resource_type="visit",
             resource_id=patient_id,
             decision="blocked",
             detail="Missing active governance basis record",
-            permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+            permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
         )
+        db.commit()
         raise HTTPException(
             status_code=403,
             detail=(
@@ -565,6 +630,7 @@ def create_visit(
 
     try:
         visit, ledger_entry = create_patient_visit(
+            db,
             patient_id=patient_id,
             visit_date=visit_date,
             visit_type=visit_type,
@@ -586,15 +652,17 @@ def create_visit(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     log_access_event(
+        db,
         user=user,
         action="create_visit",
         resource_type="visit",
         resource_id=visit["id"],
         decision="allowed",
         detail=f"block={ledger_entry['block']}",
-        permit_id=get_active_permit()["permit_id"] if get_active_permit() else None,
+        permit_id=get_active_permit(db)["permit_id"] if get_active_permit(db) else None,
     )
 
+    db.commit()
     return {
         "message": "Visit stored and anchored in the simulated ledger.",
         "visit": visit,
@@ -604,15 +672,18 @@ def create_visit(
 @router.get("/export/check-anonymization")
 def check_export_anonymization(
     user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     permit = _require_active_permit(
+        db,
         user=user,
         action="check_export_anonymization",
         resource_type="export",
         resource_id="results",
     )
-    result = get_export_anonymization_status()
+    result = get_export_anonymization_status(db)
     log_access_event(
+        db,
         user=user,
         action="check_export_anonymization",
         resource_type="export",
@@ -620,18 +691,23 @@ def check_export_anonymization(
         decision="allowed" if result.get("passed") else "warning",
         permit_id=permit["permit_id"],
     )
+    db.commit()
     return result
 
 @router.get("/analytics/hbsag-trajectory")
-def hbsag_trajectory(user: AuthenticatedUser = Depends(get_current_user)):
-    permit_gate = _build_permit_gate()
+def hbsag_trajectory(
+    user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    permit_gate = _build_permit_gate(db)
     if permit_gate["restricted"]:
         raise HTTPException(
             status_code=403,
             detail="No active EHDS-style data access permit is registered.",
         )
-    result = get_hbsag_trajectory()
+    result = get_hbsag_trajectory(db)
     log_access_event(
+        db,
         user=user,
         action="read_hbsag_trajectory",
         resource_type="analytics",
@@ -639,28 +715,34 @@ def hbsag_trajectory(user: AuthenticatedUser = Depends(get_current_user)):
         decision="allowed",
         permit_id=permit_gate["active_permit"]["permit_id"],
     )
+    db.commit()
     return result
 
 
 @router.get("/ledger/chain-integrity")
-def ledger_chain_integrity(user: AuthenticatedUser = Depends(get_current_user)):
+def ledger_chain_integrity(
+    user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Returns the full ledger with per-block chain_status annotation.
     Used by the tamper simulation panel on the frontend.
     """
     permit = _require_active_permit(
+        db,
         user=user,
         action="read_chain_integrity",
         resource_type="ledger",
         resource_id="chain",
     )
-    from ..services.demo_data import _load_store, verify_chain_integrity
 
-    store = _load_store()
-    chain = verify_chain_integrity(store["ledger"])
+    ledger_rows = db.query(LedgerBlock).order_by(LedgerBlock.block.asc()).all()
+    ledger = [_ledger_to_dict(b) for b in ledger_rows]
+    chain = verify_chain_integrity(ledger)
     broken_count = sum(1 for b in chain if b["chain_status"] == "broken")
 
     log_access_event(
+        db,
         user=user,
         action="read_chain_integrity",
         resource_type="ledger",
@@ -668,6 +750,7 @@ def ledger_chain_integrity(user: AuthenticatedUser = Depends(get_current_user)):
         decision="allowed",
         permit_id=permit["permit_id"],
     )
+    db.commit()
     return {
         "chain": sorted(chain, key=lambda b: b["block"]),
         "total_blocks": len(chain),
@@ -680,35 +763,30 @@ def ledger_chain_integrity(user: AuthenticatedUser = Depends(get_current_user)):
 def tamper_simulate(
     block_number: int = Form(...),
     user: AuthenticatedUser = Depends(require_roles("data_steward", "site_admin")),
+    db: Session = Depends(get_db),
 ):
     """
     Corrupts the artifact hash of a given block to demonstrate tamper detection.
     Only works in dev/prototype mode — never in production.
     """
-    from ..services.demo_data import (
-        _load_store,
-        _save_store,
-        verify_chain_integrity,
-    )
-
-    store = _load_store()
-    target = next(
-        (b for b in store["ledger"] if int(b["block"]) == block_number), None
-    )
+    target = db.query(LedgerBlock).filter(LedgerBlock.block == block_number).first()
     if target is None:
         raise HTTPException(status_code=404, detail=f"Block {block_number} not found.")
 
     # Corrupt the artifact hash — leaves block_hash and previous_hash intact
     # so the mismatch is detected by verify_chain_integrity
-    original_hash = target["hash"]
-    target["hash"] = "tampered_" + original_hash[:55]
-    target["status"] = "tampered"
-    _save_store(store)
+    original_hash = target.hash
+    target.hash = "tampered_" + original_hash[:55]
+    target.status = "tampered"
+    db.flush()
 
-    chain = verify_chain_integrity(store["ledger"])
+    ledger_rows = db.query(LedgerBlock).order_by(LedgerBlock.block.asc()).all()
+    ledger = [_ledger_to_dict(b) for b in ledger_rows]
+    chain = verify_chain_integrity(ledger)
     broken = [b for b in chain if b["chain_status"] == "broken"]
 
     log_access_event(
+        db,
         user=user,
         action="tamper_simulate",
         resource_type="ledger",
@@ -717,6 +795,7 @@ def tamper_simulate(
         detail=f"Block {block_number} hash corrupted. {len(broken)} block(s) now broken.",
         permit_id=None,
     )
+    db.commit()
     return {
         "tampered_block": block_number,
         "broken_blocks": [b["block"] for b in broken],
@@ -727,15 +806,18 @@ def tamper_simulate(
 def verify_patient(
     patient_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     permit = _require_active_permit(
+        db,
         user=user,
         action="verify_patient",
         resource_type="patient",
         resource_id=patient_id,
     )
-    result = verify_patient_integrity(patient_id)
+    result = verify_patient_integrity(db, patient_id)
     log_access_event(
+        db,
         user=user,
         action="verify_patient",
         resource_type="patient",
@@ -743,6 +825,7 @@ def verify_patient(
         decision="allowed" if result.get("verified") else "warning",
         permit_id=permit["permit_id"],
     )
+    db.commit()
     return result
 
 
@@ -751,15 +834,18 @@ def verify_visit(
     patient_id: str,
     visit_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     permit = _require_active_permit(
+        db,
         user=user,
         action="verify_visit",
         resource_type="visit",
         resource_id=visit_id,
     )
-    result = verify_visit_integrity(patient_id, visit_id)
+    result = verify_visit_integrity(db, patient_id, visit_id)
     log_access_event(
+        db,
         user=user,
         action="verify_visit",
         resource_type="visit",
@@ -767,4 +853,5 @@ def verify_visit(
         decision="allowed" if result.get("verified") else "warning",
         permit_id=permit["permit_id"],
     )
+    db.commit()
     return result

@@ -1,11 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from .config import settings
+from .db import engine, Base
+from . import models  # noqa: F401 — registers models with Base
 from .routers import audits, patients, quality, snapshots
 from .routers.prototype import router as prototype_router
 
 app = FastAPI(title=settings.app_name, version="0.3.0")
+
+
+@app.on_event("startup")
+def create_tables():
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS trustchain"))
+    Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,

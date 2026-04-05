@@ -4,14 +4,19 @@ import hashlib
 import json
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
-from threading import Lock
 from typing import Any
 
-STORE_DIR = Path(__file__).resolve().parents[2] / "data"
-STORE_PATH = STORE_DIR / "prototype_store.json"
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from ..models import LedgerBlock, Patient, Submission, Visit
+
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
-STORE_LOCK = Lock()
+
+
+# ── Pure helpers (unchanged) ──────────────────────────────────────
 
 
 def _now_iso() -> str:
@@ -41,72 +46,6 @@ def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
-def _normalize_store(store: dict[str, Any]) -> dict[str, Any]:
-    if "submissions" not in store:
-        store["submissions"] = []
-    if "ledger" not in store:
-        store["ledger"] = []
-    if "patients" not in store:
-        store["patients"] = []
-    if "consents" not in store:
-        store["consents"] = []
-    if "access_audit" not in store:
-        store["access_audit"] = []
-    if "permits" not in store:
-        store["permits"] = []
-
-    for patient in store["patients"]:
-        if "visits" not in patient:
-            patient["visits"] = []
-        if "visit_count" not in patient:
-            patient["visit_count"] = len(patient["visits"])
-        if "opted_out_secondary_use" not in patient:
-            patient["opted_out_secondary_use"] = False
-
-    return store
-
-
-def _ensure_store_exists() -> None:
-    STORE_DIR.mkdir(parents=True, exist_ok=True)
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-    if not STORE_PATH.exists():
-        STORE_PATH.write_text(
-            json.dumps(
-                {
-                    "submissions": [],
-                    "ledger": [],
-                    "patients": [],
-                    "consents": [],
-                    "access_audit": [],
-                    "permits": [],
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-
-
-def _load_store() -> dict[str, Any]:
-    _ensure_store_exists()
-    with STORE_LOCK:
-        store = json.loads(STORE_PATH.read_text(encoding="utf-8"))
-    return _normalize_store(store)
-
-
-def _save_store(store: dict[str, Any]) -> None:
-    _ensure_store_exists()
-    normalized = _normalize_store(store)
-    with STORE_LOCK:
-        STORE_PATH.write_text(json.dumps(normalized, indent=2), encoding="utf-8")
-
-
-def _next_block_number(ledger: list[dict[str, Any]]) -> int:
-    if not ledger:
-        return 201
-    return max(int(item["block"]) for item in ledger) + 1
-
-
 def _omop_domain(artifact: str) -> str:
     if artifact.startswith("patient_"):
         return "CONDITION_OCCURRENCE + MEASUREMENT"
@@ -117,90 +56,123 @@ def _omop_domain(artifact: str) -> str:
     elif artifact.startswith("permit_"):
         return "NOTE"
     else:
-        # Dataset submissions use source_type prefixes (ehr_, laboratory_, etc.)
         return "VISIT_OCCURRENCE"
 
 
-def _append_ledger_entry(
-    store: dict[str, Any],
-    *,
-    artifact: str,
-    event: str,
-    artifact_hash: str,
-    signer: str,
-    extra_fields: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    ledger = store["ledger"]
+# ── ORM → dict conversion ────────────────────────────────────────
 
-    # Resolve previous block hash — genesis block uses 64 zeros
-    if ledger:
-        prev_block = max(ledger, key=lambda b: int(b["block"]))
-        previous_hash = prev_block.get("block_hash", "0" * 64)
-    else:
-        previous_hash = "0" * 64
 
-    # Build the canonical block content (everything that gets committed)
-    block_number = _next_block_number(ledger)
-    block_content = {
-        "block": block_number,
-        "artifact": artifact,
-        "event": event,
-        "hash": artifact_hash,
-        "previous_hash": previous_hash,
-        "signer": signer,
-        "timestamp": _now_iso(),
+def _dec(v: Any) -> Any:
+    """Convert Decimal to float for JSON-safe output."""
+    if isinstance(v, Decimal):
+        return float(v)
+    return v
+
+
+def _submission_to_dict(s: Submission) -> dict[str, Any]:
+    return {
+        "id": s.id,
+        "created_at": s.created_at,
+        "site_name": s.site_name,
+        "source_type": s.source_type,
+        "country": s.country,
+        "operator_id": s.operator_id,
+        "record_count": s.record_count,
+        "hbv_cohort": s.hbv_cohort,
+        "bepirovirsen_treated": s.bepirovirsen_treated,
+        "dq_score": _dec(s.dq_score),
+        "readiness_score": _dec(s.readiness_score),
+        "schema_signed": s.schema_signed,
+        "temporal_issue_count": s.temporal_issue_count,
+        "needs_vocab_remap": s.needs_vocab_remap,
+        "notes": s.notes,
+        "file_name": s.file_name,
+        "artifact_hash": s.artifact_hash,
+        "ledger_block": s.ledger_block,
+        "verification_status": s.verification_status,
     }
 
-    # The block_hash commits to ALL fields above — any tampering breaks the chain
-    block_content["block_hash"] = _sha256_text(_canonical_json(block_content))
-    block_content["status"] = "verified"
-    block_content["omop_domain"] = _omop_domain(artifact)
 
-    if extra_fields:
-        block_content.update(extra_fields)
+def _visit_to_dict(v: Visit) -> dict[str, Any]:
+    return {
+        "id": v.id,
+        "patient_id": v.patient_id,
+        "created_at": v.created_at,
+        "visit_date": v.visit_date,
+        "visit_type": v.visit_type,
+        "quantitative_hbsag": _dec(v.quantitative_hbsag),
+        "hbv_dna": _dec(v.hbv_dna),
+        "hbv_dna_detectable": v.hbv_dna_detectable,
+        "alt": _dec(v.alt),
+        "ast": _dec(v.ast),
+        "hbeag_status": v.hbeag_status,
+        "bilirubin": _dec(v.bilirubin),
+        "albumin": _dec(v.albumin),
+        "inr": _dec(v.inr),
+        "on_na_therapy": v.on_na_therapy,
+        "on_bepirovirsen": v.on_bepirovirsen,
+        "functional_cure_endpoint": v.functional_cure_endpoint,
+        "notes": v.notes,
+        "artifact_hash": v.artifact_hash,
+        "ledger_block": v.ledger_block,
+        "verification_status": v.verification_status,
+    }
 
-    ledger.append(block_content)
-    return block_content
 
-def verify_chain_integrity(ledger: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """
-    Walk the ledger in block order and verify the previous_hash linkage.
-    Returns the ledger entries annotated with chain_status: 'verified' | 'broken'.
-    """
-    sorted_blocks = sorted(ledger, key=lambda b: int(b["block"]))
-    results = []
-    expected_previous = "0" * 64
+def _patient_to_dict(p: Patient) -> dict[str, Any]:
+    visits = sorted(p.visits, key=lambda v: v.created_at, reverse=True)
+    return {
+        "id": p.id,
+        "created_at": p.created_at,
+        "site_name": p.site_name,
+        "country": p.country,
+        "operator_id": p.operator_id,
+        "patient_pseudonym": p.patient_pseudonym,
+        "sex": p.sex,
+        "year_of_birth": p.year_of_birth,
+        "diagnosis_date": p.diagnosis_date,
+        "chronic_hbv_confirmed": p.chronic_hbv_confirmed,
+        "on_na_therapy": p.on_na_therapy,
+        "bepirovirsen_eligible": p.bepirovirsen_eligible,
+        "started_bepirovirsen": p.started_bepirovirsen,
+        "opted_out_secondary_use": p.opted_out_secondary_use,
+        "baseline_hbsag": _dec(p.baseline_hbsag),
+        "baseline_hbv_dna": _dec(p.baseline_hbv_dna),
+        "baseline_alt": _dec(p.baseline_alt),
+        "baseline_ast": _dec(p.baseline_ast),
+        "hbeag_status": p.hbeag_status,
+        "bilirubin": _dec(p.bilirubin),
+        "albumin": _dec(p.albumin),
+        "inr": _dec(p.inr),
+        "notes": p.notes,
+        "artifact_hash": p.artifact_hash,
+        "ledger_block": p.ledger_block,
+        "verification_status": p.verification_status,
+        "visit_count": p.visit_count,
+        "visits": [_visit_to_dict(v) for v in visits],
+    }
 
-    for block in sorted_blocks:
-        # Recompute what the block_hash should be
-        canonical = {
-            "block": block["block"],
-            "artifact": block["artifact"],
-            "event": block["event"],
-            "hash": block["hash"],
-            "previous_hash": block.get("previous_hash", "0" * 64),
-            "signer": block["signer"],
-            "timestamp": block["timestamp"],
-        }
-        expected_block_hash = _sha256_text(_canonical_json(canonical))
-        actual_block_hash = block.get("block_hash", "")
 
-        prev_hash_matches = block.get("previous_hash", "0" * 64) == expected_previous
-        block_hash_matches = actual_block_hash == expected_block_hash
+def _ledger_to_dict(b: LedgerBlock) -> dict[str, Any]:
+    return {
+        "block": b.block,
+        "artifact": b.artifact,
+        "event": b.event,
+        "hash": b.hash,
+        "previous_hash": b.previous_hash,
+        "block_hash": b.block_hash,
+        "signer": b.signer,
+        "timestamp": b.timestamp,
+        "status": b.status,
+        "omop_domain": b.omop_domain,
+        "submission_id": b.submission_id,
+        "patient_id": b.patient_id,
+        "visit_id": b.visit_id,
+    }
 
-        chain_ok = prev_hash_matches and block_hash_matches
-        annotated = dict(block)
-        annotated["chain_status"] = "verified" if chain_ok else "broken"
-        annotated["chain_broken_reason"] = (
-            None if chain_ok else (
-                "block_hash_mismatch" if not block_hash_matches else "previous_hash_mismatch"
-            )
-        )
-        results.append(annotated)
-        # Next block must reference this block's hash (use stored hash to propagate breaks)
-        expected_previous = actual_block_hash
 
-    return results
+# ── Fingerprint payloads (unchanged logic) ───────────────────────
+
 
 def _submission_fingerprint_payload(
     *,
@@ -327,6 +299,9 @@ def _visit_fingerprint_payload(
     }
 
 
+# ── Quality / readiness scoring (unchanged logic) ────────────────
+
+
 def _patient_quality_score(patient: dict[str, Any]) -> float:
     key_fields = [
         patient.get("baseline_hbsag"),
@@ -369,6 +344,556 @@ def _patient_readiness_score(patient: dict[str, Any]) -> float:
     if patient.get("opted_out_secondary_use"):
         score -= 6
     return round(max(min(score, 98.0), 60.0), 1)
+
+
+# ── Ledger helpers ────────────────────────────────────────────────
+
+
+def _next_block_number(db: Session) -> int:
+    max_block = db.query(func.max(LedgerBlock.block)).scalar()
+    if max_block is None:
+        return 201
+    return max_block + 1
+
+
+def _append_ledger_entry(
+    db: Session,
+    *,
+    artifact: str,
+    event: str,
+    artifact_hash: str,
+    signer: str,
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    prev_block = db.query(LedgerBlock).order_by(LedgerBlock.block.desc()).first()
+    previous_hash = prev_block.block_hash if prev_block else "0" * 64
+
+    block_number = _next_block_number(db)
+    block_content = {
+        "block": block_number,
+        "artifact": artifact,
+        "event": event,
+        "hash": artifact_hash,
+        "previous_hash": previous_hash,
+        "signer": signer,
+        "timestamp": _now_iso(),
+    }
+    block_content["block_hash"] = _sha256_text(_canonical_json(block_content))
+
+    extra = extra_fields or {}
+    row = LedgerBlock(
+        block=block_number,
+        artifact=artifact,
+        event=event,
+        hash=artifact_hash,
+        previous_hash=previous_hash,
+        block_hash=block_content["block_hash"],
+        signer=signer,
+        timestamp=block_content["timestamp"],
+        status="verified",
+        omop_domain=_omop_domain(artifact),
+        submission_id=extra.get("submission_id"),
+        patient_id=extra.get("patient_id"),
+        visit_id=extra.get("visit_id"),
+    )
+    db.add(row)
+    db.flush()
+
+    return _ledger_to_dict(row)
+
+
+def verify_chain_integrity(ledger: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sorted_blocks = sorted(ledger, key=lambda b: int(b["block"]))
+    results = []
+    expected_previous = "0" * 64
+
+    for block in sorted_blocks:
+        canonical = {
+            "block": block["block"],
+            "artifact": block["artifact"],
+            "event": block["event"],
+            "hash": block["hash"],
+            "previous_hash": block.get("previous_hash", "0" * 64),
+            "signer": block["signer"],
+            "timestamp": block["timestamp"],
+        }
+        expected_block_hash = _sha256_text(_canonical_json(canonical))
+        actual_block_hash = block.get("block_hash", "")
+
+        prev_hash_matches = block.get("previous_hash", "0" * 64) == expected_previous
+        block_hash_matches = actual_block_hash == expected_block_hash
+
+        chain_ok = prev_hash_matches and block_hash_matches
+        annotated = dict(block)
+        annotated["chain_status"] = "verified" if chain_ok else "broken"
+        annotated["chain_broken_reason"] = (
+            None if chain_ok else (
+                "block_hash_mismatch" if not block_hash_matches else "previous_hash_mismatch"
+            )
+        )
+        results.append(annotated)
+        expected_previous = actual_block_hash
+
+    return results
+
+
+# ── CRUD functions ────────────────────────────────────────────────
+
+
+def create_prototype_submission(
+    db: Session,
+    *,
+    site_name: str,
+    source_type: str,
+    country: str,
+    operator_id: str,
+    record_count: int,
+    hbv_cohort: int,
+    bepirovirsen_treated: int,
+    dq_score: float,
+    readiness_score: float,
+    schema_signed: bool,
+    temporal_issue_count: int,
+    needs_vocab_remap: bool,
+    notes: str,
+    file_name: str | None = None,
+    file_bytes: bytes | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    file_hash = _sha256_bytes(file_bytes) if file_bytes else None
+    if file_name and file_bytes:
+        safe_name = f"{uuid.uuid4().hex[:12]}_{file_name}"
+        (UPLOAD_DIR / safe_name).write_bytes(file_bytes)
+
+    artifact_payload = _submission_fingerprint_payload(
+        site_name=site_name,
+        source_type=source_type,
+        country=country,
+        operator_id=operator_id,
+        record_count=record_count,
+        hbv_cohort=hbv_cohort,
+        bepirovirsen_treated=bepirovirsen_treated,
+        dq_score=dq_score,
+        readiness_score=readiness_score,
+        schema_signed=schema_signed,
+        temporal_issue_count=temporal_issue_count,
+        needs_vocab_remap=needs_vocab_remap,
+        notes=notes,
+        file_name=file_name,
+        file_hash=file_hash,
+    )
+    artifact_hash = _sha256_text(_canonical_json(artifact_payload))
+
+    submission_id = uuid.uuid4().hex[:12]
+    created_at = _now_iso()
+
+    ledger_entry = _append_ledger_entry(
+        db,
+        artifact=f"{source_type.lower()}_{submission_id}.json",
+        event="Submission notarized in simulated ledger",
+        artifact_hash=artifact_hash,
+        signer=operator_id,
+        extra_fields={"submission_id": submission_id},
+    )
+
+    row = Submission(
+        id=submission_id,
+        created_at=created_at,
+        site_name=site_name,
+        source_type=source_type,
+        country=country,
+        operator_id=operator_id,
+        record_count=int(record_count),
+        hbv_cohort=int(hbv_cohort),
+        bepirovirsen_treated=int(bepirovirsen_treated),
+        dq_score=float(dq_score),
+        readiness_score=float(readiness_score),
+        schema_signed=bool(schema_signed),
+        temporal_issue_count=int(temporal_issue_count),
+        needs_vocab_remap=bool(needs_vocab_remap),
+        notes=notes,
+        file_name=file_name,
+        artifact_hash=artifact_hash,
+        ledger_block=ledger_entry["block"],
+        verification_status="verified",
+    )
+    db.add(row)
+    db.flush()
+
+    return _submission_to_dict(row), ledger_entry
+
+
+def create_prototype_patient(
+    db: Session,
+    *,
+    site_name: str,
+    country: str,
+    operator_id: str,
+    patient_pseudonym: str,
+    sex: str,
+    year_of_birth: int,
+    diagnosis_date: str,
+    chronic_hbv_confirmed: bool = True,
+    on_na_therapy: bool = False,
+    bepirovirsen_eligible: bool = False,
+    started_bepirovirsen: bool = False,
+    opted_out_secondary_use: bool = False,
+    baseline_hbsag: float | None = None,
+    baseline_hbv_dna: float | None = None,
+    baseline_alt: float | None = None,
+    baseline_ast: float | None = None,
+    hbeag_status: str = "unknown",
+    bilirubin: float | None = None,
+    albumin: float | None = None,
+    inr: float | None = None,
+    notes: str = "",
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    artifact_payload = _patient_fingerprint_payload(
+        site_name=site_name,
+        country=country,
+        operator_id=operator_id,
+        patient_pseudonym=patient_pseudonym,
+        sex=sex,
+        year_of_birth=year_of_birth,
+        diagnosis_date=diagnosis_date,
+        chronic_hbv_confirmed=chronic_hbv_confirmed,
+        on_na_therapy=on_na_therapy,
+        bepirovirsen_eligible=bepirovirsen_eligible,
+        started_bepirovirsen=started_bepirovirsen,
+        opted_out_secondary_use=opted_out_secondary_use,
+        baseline_hbsag=baseline_hbsag,
+        baseline_hbv_dna=baseline_hbv_dna,
+        baseline_alt=baseline_alt,
+        baseline_ast=baseline_ast,
+        hbeag_status=hbeag_status,
+        bilirubin=bilirubin,
+        albumin=albumin,
+        inr=inr,
+        notes=notes,
+    )
+    artifact_hash = _sha256_text(_canonical_json(artifact_payload))
+
+    patient_id = uuid.uuid4().hex[:12]
+    created_at = _now_iso()
+
+    ledger_entry = _append_ledger_entry(
+        db,
+        artifact=f"patient_{patient_id}.json",
+        event="Patient baseline notarized in simulated ledger",
+        artifact_hash=artifact_hash,
+        signer=operator_id,
+        extra_fields={"patient_id": patient_id},
+    )
+
+    row = Patient(
+        id=patient_id,
+        created_at=created_at,
+        site_name=site_name,
+        country=country,
+        operator_id=operator_id,
+        patient_pseudonym=patient_pseudonym,
+        sex=sex,
+        year_of_birth=int(year_of_birth),
+        diagnosis_date=diagnosis_date,
+        chronic_hbv_confirmed=bool(chronic_hbv_confirmed),
+        on_na_therapy=bool(on_na_therapy),
+        bepirovirsen_eligible=bool(bepirovirsen_eligible),
+        started_bepirovirsen=bool(started_bepirovirsen),
+        opted_out_secondary_use=bool(opted_out_secondary_use),
+        baseline_hbsag=baseline_hbsag,
+        baseline_hbv_dna=baseline_hbv_dna,
+        baseline_alt=baseline_alt,
+        baseline_ast=baseline_ast,
+        hbeag_status=hbeag_status,
+        bilirubin=bilirubin,
+        albumin=albumin,
+        inr=inr,
+        notes=notes,
+        artifact_hash=artifact_hash,
+        ledger_block=ledger_entry["block"],
+        verification_status="verified",
+        visit_count=0,
+    )
+    db.add(row)
+    db.flush()
+
+    return _patient_to_dict(row), ledger_entry
+
+
+def create_patient_visit(
+    db: Session,
+    *,
+    patient_id: str,
+    visit_date: str,
+    visit_type: str,
+    quantitative_hbsag: float | None = None,
+    hbv_dna: float | None = None,
+    hbv_dna_detectable: bool = True,
+    alt: float | None = None,
+    ast: float | None = None,
+    hbeag_status: str = "unknown",
+    bilirubin: float | None = None,
+    albumin: float | None = None,
+    inr: float | None = None,
+    on_na_therapy: bool = False,
+    on_bepirovirsen: bool = False,
+    functional_cure_endpoint: bool = False,
+    notes: str = "",
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if patient is None:
+        raise ValueError("Patient not found.")
+
+    patient_dict = _patient_to_dict(patient)
+
+    artifact_payload = _visit_fingerprint_payload(
+        patient_id=patient_id,
+        visit_date=visit_date,
+        visit_type=visit_type,
+        quantitative_hbsag=quantitative_hbsag,
+        hbv_dna=hbv_dna,
+        hbv_dna_detectable=hbv_dna_detectable,
+        alt=alt,
+        ast=ast,
+        hbeag_status=hbeag_status,
+        bilirubin=bilirubin,
+        albumin=albumin,
+        inr=inr,
+        on_na_therapy=on_na_therapy,
+        on_bepirovirsen=on_bepirovirsen,
+        functional_cure_endpoint=functional_cure_endpoint,
+        notes=notes,
+    )
+    artifact_hash = _sha256_text(_canonical_json(artifact_payload))
+
+    visit_id = uuid.uuid4().hex[:12]
+    created_at = _now_iso()
+
+    # Compute quality/readiness for visit
+    visit_dict_for_scoring = {
+        "quantitative_hbsag": quantitative_hbsag,
+        "hbv_dna": hbv_dna,
+        "alt": alt,
+        "ast": ast,
+        "visit_date": visit_date,
+    }
+    dq_score = _visit_quality_score(patient_dict, visit_dict_for_scoring)
+    readiness_score = _patient_readiness_score(patient_dict)
+
+    ledger_entry = _append_ledger_entry(
+        db,
+        artifact=f"visit_{visit_id}.json",
+        event="Visit notarized in simulated ledger",
+        artifact_hash=artifact_hash,
+        signer=patient.operator_id,
+        extra_fields={"patient_id": patient_id, "visit_id": visit_id},
+    )
+
+    row = Visit(
+        id=visit_id,
+        patient_id=patient_id,
+        created_at=created_at,
+        visit_date=visit_date,
+        visit_type=visit_type,
+        quantitative_hbsag=quantitative_hbsag,
+        hbv_dna=hbv_dna,
+        hbv_dna_detectable=bool(hbv_dna_detectable),
+        alt=alt,
+        ast=ast,
+        hbeag_status=hbeag_status,
+        bilirubin=bilirubin,
+        albumin=albumin,
+        inr=inr,
+        on_na_therapy=bool(on_na_therapy),
+        on_bepirovirsen=bool(on_bepirovirsen),
+        functional_cure_endpoint=bool(functional_cure_endpoint),
+        notes=notes,
+        artifact_hash=artifact_hash,
+        ledger_block=ledger_entry["block"],
+        verification_status="verified",
+        dq_score=dq_score,
+        readiness_score=readiness_score,
+    )
+    db.add(row)
+
+    patient.visit_count = len(patient.visits) + 1
+    db.flush()
+
+    return _visit_to_dict(row), ledger_entry
+
+
+# ── Read functions ────────────────────────────────────────────────
+
+
+def get_prototype_submissions(db: Session) -> list[dict[str, Any]]:
+    rows = db.query(Submission).order_by(Submission.created_at.desc()).all()
+    return [_submission_to_dict(r) for r in rows]
+
+
+def get_prototype_patients(db: Session) -> list[dict[str, Any]]:
+    rows = db.query(Patient).order_by(Patient.created_at.desc()).all()
+    results = []
+    for p in rows:
+        d = _patient_to_dict(p)
+        d["visit_count"] = len(d["visits"])
+        results.append(d)
+    return results
+
+
+def verify_submission_integrity(db: Session, submission_id: str) -> dict[str, Any]:
+    s = db.query(Submission).filter(Submission.id == submission_id).first()
+    if s is None:
+        return {"verified": False, "message": "Submission not found.", "ledger_block": -1}
+
+    sd = _submission_to_dict(s)
+    artifact_payload = _submission_fingerprint_payload(
+        site_name=sd["site_name"],
+        source_type=sd["source_type"],
+        country=sd["country"],
+        operator_id=sd["operator_id"],
+        record_count=sd["record_count"],
+        hbv_cohort=sd["hbv_cohort"],
+        bepirovirsen_treated=sd["bepirovirsen_treated"],
+        dq_score=sd["dq_score"],
+        readiness_score=sd["readiness_score"],
+        schema_signed=sd["schema_signed"],
+        temporal_issue_count=sd["temporal_issue_count"],
+        needs_vocab_remap=sd["needs_vocab_remap"],
+        notes=sd["notes"],
+        file_name=sd.get("file_name"),
+        file_hash=None,
+    )
+    expected_hash = _sha256_text(_canonical_json(artifact_payload))
+    verified = expected_hash == sd["artifact_hash"]
+
+    return {
+        "verified": verified,
+        "message": "Submission hash verified." if verified else "Submission hash mismatch.",
+        "ledger_block": sd["ledger_block"],
+    }
+
+
+def verify_patient_integrity(db: Session, patient_id: str) -> dict[str, Any]:
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if p is None:
+        return {"verified": False, "message": "Patient not found.", "ledger_block": -1}
+
+    pd = _patient_to_dict(p)
+    artifact_payload = _patient_fingerprint_payload(
+        site_name=pd["site_name"],
+        country=pd["country"],
+        operator_id=pd["operator_id"],
+        patient_pseudonym=pd["patient_pseudonym"],
+        sex=pd["sex"],
+        year_of_birth=pd["year_of_birth"],
+        diagnosis_date=pd["diagnosis_date"],
+        chronic_hbv_confirmed=pd["chronic_hbv_confirmed"],
+        on_na_therapy=pd["on_na_therapy"],
+        bepirovirsen_eligible=pd["bepirovirsen_eligible"],
+        started_bepirovirsen=pd["started_bepirovirsen"],
+        opted_out_secondary_use=pd.get("opted_out_secondary_use", False),
+        baseline_hbsag=pd["baseline_hbsag"],
+        baseline_hbv_dna=pd["baseline_hbv_dna"],
+        baseline_alt=pd["baseline_alt"],
+        baseline_ast=pd["baseline_ast"],
+        hbeag_status=pd["hbeag_status"],
+        bilirubin=pd["bilirubin"],
+        albumin=pd["albumin"],
+        inr=pd["inr"],
+        notes=pd["notes"],
+    )
+    expected_hash = _sha256_text(_canonical_json(artifact_payload))
+    verified = expected_hash == pd["artifact_hash"]
+
+    return {
+        "verified": verified,
+        "message": "Patient hash verified." if verified else "Patient hash mismatch.",
+        "ledger_block": pd["ledger_block"],
+    }
+
+
+def verify_visit_integrity(db: Session, patient_id: str, visit_id: str) -> dict[str, Any]:
+    p = db.query(Patient).filter(Patient.id == patient_id).first()
+    if p is None:
+        return {"verified": False, "message": "Patient not found.", "ledger_block": -1}
+
+    v = db.query(Visit).filter(Visit.id == visit_id, Visit.patient_id == patient_id).first()
+    if v is None:
+        return {"verified": False, "message": "Visit not found.", "ledger_block": -1}
+
+    vd = _visit_to_dict(v)
+    artifact_payload = _visit_fingerprint_payload(
+        patient_id=patient_id,
+        visit_date=vd["visit_date"],
+        visit_type=vd["visit_type"],
+        quantitative_hbsag=vd["quantitative_hbsag"],
+        hbv_dna=vd["hbv_dna"],
+        hbv_dna_detectable=vd["hbv_dna_detectable"],
+        alt=vd["alt"],
+        ast=vd["ast"],
+        hbeag_status=vd["hbeag_status"],
+        bilirubin=vd["bilirubin"],
+        albumin=vd["albumin"],
+        inr=vd["inr"],
+        on_na_therapy=vd["on_na_therapy"],
+        on_bepirovirsen=vd["on_bepirovirsen"],
+        functional_cure_endpoint=vd["functional_cure_endpoint"],
+        notes=vd["notes"],
+    )
+    expected_hash = _sha256_text(_canonical_json(artifact_payload))
+    verified = expected_hash == vd["artifact_hash"]
+
+    return {
+        "verified": verified,
+        "message": "Visit hash verified." if verified else "Visit hash mismatch.",
+        "ledger_block": vd["ledger_block"],
+    }
+
+
+def get_export_anonymization_status(db: Session) -> dict[str, Any]:
+    patients = get_prototype_patients(db)
+    return _build_export_gate(patients)
+
+
+def get_hbsag_trajectory(db: Session) -> dict[str, Any]:
+    patients = get_prototype_patients(db)
+
+    visit_order = [
+        "baseline", "week4", "week8", "week12", "week24",
+        "post_week4", "post_week8", "post_week12", "post_week24",
+    ]
+    bwell_ref = {
+        "baseline": 2800, "week4": 1200, "week8": 600, "week12": 200,
+        "week24": 48, "post_week4": 45, "post_week8": 42,
+        "post_week12": 40, "post_week24": 38,
+    }
+
+    grouped: dict[str, list[float]] = {stage: [] for stage in visit_order}
+    for patient in patients:
+        for visit in patient.get("visits", []):
+            vt = visit.get("visit_type", "")
+            hbsag = visit.get("hbsag_iuml") or visit.get("quantitative_hbsag")
+            if vt in grouped and hbsag is not None:
+                grouped[vt].append(float(hbsag))
+
+    trajectory = []
+    for stage in visit_order:
+        values = grouped[stage]
+        mean_val = round(sum(values) / len(values), 2) if values else 0.0
+        trajectory.append({
+            "name": stage,
+            "mean_hbsag": mean_val,
+            "bwell_ref": bwell_ref[stage],
+        })
+
+    return {
+        "trajectory": trajectory,
+        "patient_count": len(patients),
+    }
+
+
+# ── Source feeds / OMOP ETL / export gate (unchanged logic) ──────
 
 
 def _build_source_feeds(submissions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -645,458 +1170,19 @@ def _build_export_gate(patients: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def get_export_anonymization_status() -> dict[str, Any]:
-    store = _load_store()
-    return _build_export_gate(store["patients"])
+# ── Dashboard builder ─────────────────────────────────────────────
 
 
-def get_hbsag_trajectory() -> dict[str, Any]:
-    store = _load_store()
-    patients = store["patients"]
-
-    visit_order = [
-        "baseline", "week4", "week8", "week12", "week24",
-        "post_week4", "post_week8", "post_week12", "post_week24",
-    ]
-    bwell_ref = {
-        "baseline": 2800, "week4": 1200, "week8": 600, "week12": 200,
-        "week24": 48, "post_week4": 45, "post_week8": 42,
-        "post_week12": 40, "post_week24": 38,
-    }
-
-    grouped: dict[str, list[float]] = {stage: [] for stage in visit_order}
-    for patient in patients:
-        for visit in patient.get("visits", []):
-            vt = visit.get("visit_type", "")
-            hbsag = visit.get("hbsag_iuml") or visit.get("quantitative_hbsag")
-            if vt in grouped and hbsag is not None:
-                grouped[vt].append(float(hbsag))
-
-    trajectory = []
-    for stage in visit_order:
-        values = grouped[stage]
-        mean_val = round(sum(values) / len(values), 2) if values else 0.0
-        trajectory.append({
-            "name": stage,
-            "mean_hbsag": mean_val,
-            "bwell_ref": bwell_ref[stage],
-        })
-
-    return {
-        "trajectory": trajectory,
-        "patient_count": len(patients),
-    }
-
-
-def create_prototype_submission(
-    *,
-    site_name: str,
-    source_type: str,
-    country: str,
-    operator_id: str,
-    record_count: int,
-    hbv_cohort: int,
-    bepirovirsen_treated: int,
-    dq_score: float,
-    readiness_score: float,
-    schema_signed: bool,
-    temporal_issue_count: int,
-    needs_vocab_remap: bool,
-    notes: str,
-    file_name: str | None = None,
-    file_bytes: bytes | None = None,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    store = _load_store()
-
-    file_hash = _sha256_bytes(file_bytes) if file_bytes else None
-    if file_name and file_bytes:
-        safe_name = f"{uuid.uuid4().hex[:12]}_{file_name}"
-        (UPLOAD_DIR / safe_name).write_bytes(file_bytes)
-
-    artifact_payload = _submission_fingerprint_payload(
-        site_name=site_name,
-        source_type=source_type,
-        country=country,
-        operator_id=operator_id,
-        record_count=record_count,
-        hbv_cohort=hbv_cohort,
-        bepirovirsen_treated=bepirovirsen_treated,
-        dq_score=dq_score,
-        readiness_score=readiness_score,
-        schema_signed=schema_signed,
-        temporal_issue_count=temporal_issue_count,
-        needs_vocab_remap=needs_vocab_remap,
-        notes=notes,
-        file_name=file_name,
-        file_hash=file_hash,
-    )
-    artifact_hash = _sha256_text(_canonical_json(artifact_payload))
-
-    submission_id = uuid.uuid4().hex[:12]
-    created_at = _now_iso()
-
-    ledger_entry = _append_ledger_entry(
-        store,
-        artifact=f"{source_type.lower()}_{submission_id}.json",
-        event="Submission notarized in simulated ledger",
-        artifact_hash=artifact_hash,
-        signer=operator_id,
-        extra_fields={"submission_id": submission_id},
-    )
-
-    submission = {
-        "id": submission_id,
-        "created_at": created_at,
-        "site_name": site_name,
-        "source_type": source_type,
-        "country": country,
-        "operator_id": operator_id,
-        "record_count": int(record_count),
-        "hbv_cohort": int(hbv_cohort),
-        "bepirovirsen_treated": int(bepirovirsen_treated),
-        "dq_score": float(dq_score),
-        "readiness_score": float(readiness_score),
-        "schema_signed": bool(schema_signed),
-        "temporal_issue_count": int(temporal_issue_count),
-        "needs_vocab_remap": bool(needs_vocab_remap),
-        "notes": notes,
-        "file_name": file_name,
-        "artifact_hash": artifact_hash,
-        "ledger_block": ledger_entry["block"],
-        "verification_status": "verified",
-    }
-
-    store["submissions"].append(submission)
-    _save_store(store)
-    return submission, ledger_entry
-
-
-def create_prototype_patient(
-    *,
-    site_name: str,
-    country: str,
-    operator_id: str,
-    patient_pseudonym: str,
-    sex: str,
-    year_of_birth: int,
-    diagnosis_date: str,
-    chronic_hbv_confirmed: bool = True,
-    on_na_therapy: bool = False,
-    bepirovirsen_eligible: bool = False,
-    started_bepirovirsen: bool = False,
-    opted_out_secondary_use: bool = False,
-    baseline_hbsag: float | None = None,
-    baseline_hbv_dna: float | None = None,
-    baseline_alt: float | None = None,
-    baseline_ast: float | None = None,
-    hbeag_status: str = "unknown",
-    bilirubin: float | None = None,
-    albumin: float | None = None,
-    inr: float | None = None,
-    notes: str = "",
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    store = _load_store()
-
-    artifact_payload = _patient_fingerprint_payload(
-        site_name=site_name,
-        country=country,
-        operator_id=operator_id,
-        patient_pseudonym=patient_pseudonym,
-        sex=sex,
-        year_of_birth=year_of_birth,
-        diagnosis_date=diagnosis_date,
-        chronic_hbv_confirmed=chronic_hbv_confirmed,
-        on_na_therapy=on_na_therapy,
-        bepirovirsen_eligible=bepirovirsen_eligible,
-        started_bepirovirsen=started_bepirovirsen,
-        opted_out_secondary_use=opted_out_secondary_use,
-        baseline_hbsag=baseline_hbsag,
-        baseline_hbv_dna=baseline_hbv_dna,
-        baseline_alt=baseline_alt,
-        baseline_ast=baseline_ast,
-        hbeag_status=hbeag_status,
-        bilirubin=bilirubin,
-        albumin=albumin,
-        inr=inr,
-        notes=notes,
-    )
-    artifact_hash = _sha256_text(_canonical_json(artifact_payload))
-
-    patient_id = uuid.uuid4().hex[:12]
-    created_at = _now_iso()
-
-    ledger_entry = _append_ledger_entry(
-        store,
-        artifact=f"patient_{patient_id}.json",
-        event="Patient baseline notarized in simulated ledger",
-        artifact_hash=artifact_hash,
-        signer=operator_id,
-        extra_fields={"patient_id": patient_id},
-    )
-
-    patient = {
-        "id": patient_id,
-        "created_at": created_at,
-        "site_name": site_name,
-        "country": country,
-        "operator_id": operator_id,
-        "patient_pseudonym": patient_pseudonym,
-        "sex": sex,
-        "year_of_birth": int(year_of_birth),
-        "diagnosis_date": diagnosis_date,
-        "chronic_hbv_confirmed": bool(chronic_hbv_confirmed),
-        "on_na_therapy": bool(on_na_therapy),
-        "bepirovirsen_eligible": bool(bepirovirsen_eligible),
-        "started_bepirovirsen": bool(started_bepirovirsen),
-        "opted_out_secondary_use": bool(opted_out_secondary_use),
-        "baseline_hbsag": baseline_hbsag,
-        "baseline_hbv_dna": baseline_hbv_dna,
-        "baseline_alt": baseline_alt,
-        "baseline_ast": baseline_ast,
-        "hbeag_status": hbeag_status,
-        "bilirubin": bilirubin,
-        "albumin": albumin,
-        "inr": inr,
-        "notes": notes,
-        "artifact_hash": artifact_hash,
-        "ledger_block": ledger_entry["block"],
-        "verification_status": "verified",
-        "visit_count": 0,
-        "visits": [],
-    }
-
-    store["patients"].append(patient)
-    _save_store(store)
-    return patient, ledger_entry
-
-
-def create_patient_visit(
-    *,
-    patient_id: str,
-    visit_date: str,
-    visit_type: str,
-    quantitative_hbsag: float | None = None,
-    hbv_dna: float | None = None,
-    hbv_dna_detectable: bool = True,
-    alt: float | None = None,
-    ast: float | None = None,
-    hbeag_status: str = "unknown",
-    bilirubin: float | None = None,
-    albumin: float | None = None,
-    inr: float | None = None,
-    on_na_therapy: bool = False,
-    on_bepirovirsen: bool = False,
-    functional_cure_endpoint: bool = False,
-    notes: str = "",
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    store = _load_store()
-    patient = next((item for item in store["patients"] if item["id"] == patient_id), None)
-
-    if patient is None:
-        raise ValueError("Patient not found.")
-
-    artifact_payload = _visit_fingerprint_payload(
-        patient_id=patient_id,
-        visit_date=visit_date,
-        visit_type=visit_type,
-        quantitative_hbsag=quantitative_hbsag,
-        hbv_dna=hbv_dna,
-        hbv_dna_detectable=hbv_dna_detectable,
-        alt=alt,
-        ast=ast,
-        hbeag_status=hbeag_status,
-        bilirubin=bilirubin,
-        albumin=albumin,
-        inr=inr,
-        on_na_therapy=on_na_therapy,
-        on_bepirovirsen=on_bepirovirsen,
-        functional_cure_endpoint=functional_cure_endpoint,
-        notes=notes,
-    )
-    artifact_hash = _sha256_text(_canonical_json(artifact_payload))
-
-    visit_id = uuid.uuid4().hex[:12]
-    created_at = _now_iso()
-
-    ledger_entry = _append_ledger_entry(
-        store,
-        artifact=f"visit_{visit_id}.json",
-        event="Visit notarized in simulated ledger",
-        artifact_hash=artifact_hash,
-        signer=patient["operator_id"],
-        extra_fields={"patient_id": patient_id, "visit_id": visit_id},
-    )
-
-    visit = {
-        "id": visit_id,
-        "patient_id": patient_id,
-        "created_at": created_at,
-        "visit_date": visit_date,
-        "visit_type": visit_type,
-        "quantitative_hbsag": quantitative_hbsag,
-        "hbv_dna": hbv_dna,
-        "hbv_dna_detectable": bool(hbv_dna_detectable),
-        "alt": alt,
-        "ast": ast,
-        "hbeag_status": hbeag_status,
-        "bilirubin": bilirubin,
-        "albumin": albumin,
-        "inr": inr,
-        "on_na_therapy": bool(on_na_therapy),
-        "on_bepirovirsen": bool(on_bepirovirsen),
-        "functional_cure_endpoint": bool(functional_cure_endpoint),
-        "notes": notes,
-        "artifact_hash": artifact_hash,
-        "ledger_block": ledger_entry["block"],
-        "verification_status": "verified",
-    }
-
-    patient["visits"].append(visit)
-    patient["visit_count"] = len(patient["visits"])
-    _save_store(store)
-    return visit, ledger_entry
-
-
-def get_prototype_submissions() -> list[dict[str, Any]]:
-    store = _load_store()
-    return sorted(store["submissions"], key=lambda item: item["created_at"], reverse=True)
-
-
-def get_prototype_patients() -> list[dict[str, Any]]:
-    store = _load_store()
-    patients = sorted(store["patients"], key=lambda item: item["created_at"], reverse=True)
-    for patient in patients:
-        patient["visits"] = sorted(
-            patient.get("visits", []),
-            key=lambda visit: visit["created_at"],
-            reverse=True,
-        )
-        patient["visit_count"] = len(patient["visits"])
-    return patients
-
-
-def verify_submission_integrity(submission_id: str) -> dict[str, Any]:
-    store = _load_store()
-    submission = next((item for item in store["submissions"] if item["id"] == submission_id), None)
-    if submission is None:
-        return {"verified": False, "message": "Submission not found.", "ledger_block": -1}
-
-    artifact_payload = _submission_fingerprint_payload(
-        site_name=submission["site_name"],
-        source_type=submission["source_type"],
-        country=submission["country"],
-        operator_id=submission["operator_id"],
-        record_count=submission["record_count"],
-        hbv_cohort=submission["hbv_cohort"],
-        bepirovirsen_treated=submission["bepirovirsen_treated"],
-        dq_score=submission["dq_score"],
-        readiness_score=submission["readiness_score"],
-        schema_signed=submission["schema_signed"],
-        temporal_issue_count=submission["temporal_issue_count"],
-        needs_vocab_remap=submission["needs_vocab_remap"],
-        notes=submission["notes"],
-        file_name=submission.get("file_name"),
-        file_hash=None,
-    )
-    expected_hash = _sha256_text(_canonical_json(artifact_payload))
-    verified = expected_hash == submission["artifact_hash"]
-
-    return {
-        "verified": verified,
-        "message": "Submission hash verified." if verified else "Submission hash mismatch.",
-        "ledger_block": submission["ledger_block"],
-    }
-
-
-def verify_patient_integrity(patient_id: str) -> dict[str, Any]:
-    store = _load_store()
-    patient = next((item for item in store["patients"] if item["id"] == patient_id), None)
-    if patient is None:
-        return {"verified": False, "message": "Patient not found.", "ledger_block": -1}
-
-    artifact_payload = _patient_fingerprint_payload(
-        site_name=patient["site_name"],
-        country=patient["country"],
-        operator_id=patient["operator_id"],
-        patient_pseudonym=patient["patient_pseudonym"],
-        sex=patient["sex"],
-        year_of_birth=patient["year_of_birth"],
-        diagnosis_date=patient["diagnosis_date"],
-        chronic_hbv_confirmed=patient["chronic_hbv_confirmed"],
-        on_na_therapy=patient["on_na_therapy"],
-        bepirovirsen_eligible=patient["bepirovirsen_eligible"],
-        started_bepirovirsen=patient["started_bepirovirsen"],
-        opted_out_secondary_use=patient.get("opted_out_secondary_use", False),
-        baseline_hbsag=patient["baseline_hbsag"],
-        baseline_hbv_dna=patient["baseline_hbv_dna"],
-        baseline_alt=patient["baseline_alt"],
-        baseline_ast=patient["baseline_ast"],
-        hbeag_status=patient["hbeag_status"],
-        bilirubin=patient["bilirubin"],
-        albumin=patient["albumin"],
-        inr=patient["inr"],
-        notes=patient["notes"],
-    )
-    expected_hash = _sha256_text(_canonical_json(artifact_payload))
-    verified = expected_hash == patient["artifact_hash"]
-
-    return {
-        "verified": verified,
-        "message": "Patient hash verified." if verified else "Patient hash mismatch.",
-        "ledger_block": patient["ledger_block"],
-    }
-
-
-def verify_visit_integrity(patient_id: str, visit_id: str) -> dict[str, Any]:
-    store = _load_store()
-    patient = next((item for item in store["patients"] if item["id"] == patient_id), None)
-    if patient is None:
-        return {"verified": False, "message": "Patient not found.", "ledger_block": -1}
-
-    visit = next((item for item in patient["visits"] if item["id"] == visit_id), None)
-    if visit is None:
-        return {"verified": False, "message": "Visit not found.", "ledger_block": -1}
-
-    artifact_payload = _visit_fingerprint_payload(
-        patient_id=patient_id,
-        visit_date=visit["visit_date"],
-        visit_type=visit["visit_type"],
-        quantitative_hbsag=visit["quantitative_hbsag"],
-        hbv_dna=visit["hbv_dna"],
-        hbv_dna_detectable=visit["hbv_dna_detectable"],
-        alt=visit["alt"],
-        ast=visit["ast"],
-        hbeag_status=visit["hbeag_status"],
-        bilirubin=visit["bilirubin"],
-        albumin=visit["albumin"],
-        inr=visit["inr"],
-        on_na_therapy=visit["on_na_therapy"],
-        on_bepirovirsen=visit["on_bepirovirsen"],
-        functional_cure_endpoint=visit["functional_cure_endpoint"],
-        notes=visit["notes"],
-    )
-    expected_hash = _sha256_text(_canonical_json(artifact_payload))
-    verified = expected_hash == visit["artifact_hash"]
-
-    return {
-        "verified": verified,
-        "message": "Visit hash verified." if verified else "Visit hash mismatch.",
-        "ledger_block": visit["ledger_block"],
-    }
-
-
-def get_prototype_dashboard() -> dict[str, Any]:
-    store = _load_store()
-    submissions = store["submissions"]
-    patients = store["patients"]
+def get_prototype_dashboard(db: Session) -> dict[str, Any]:
+    submissions = get_prototype_submissions(db)
+    patients = get_prototype_patients(db)
     active_patients = [
         patient for patient in patients if not patient.get("opted_out_secondary_use", False)
     ]
     visits = [visit for patient in patients for visit in patient["visits"]]
     active_visits = [visit for patient in active_patients for visit in patient["visits"]]
-    ledger_raw = store["ledger"]
-    # Only run full chain verification, annotate status directly from stored fields
-    ledger = sorted(ledger_raw, key=lambda item: item["block"], reverse=True)
+    ledger_rows = db.query(LedgerBlock).order_by(LedgerBlock.block.desc()).all()
+    ledger = [_ledger_to_dict(b) for b in ledger_rows]
 
     unique_sources = len({item["source_type"] for item in submissions})
     dataset_hbv_total = sum(item["hbv_cohort"] for item in submissions)

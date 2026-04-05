@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     keycloak_client_id: str = ""
     keycloak_jwks_url: str = ""
 
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/trustchain"
+
     consent_required_for_patient_write: bool = True
 
     model_config = SettingsConfigDict(
