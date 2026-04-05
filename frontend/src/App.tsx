@@ -251,6 +251,7 @@ type PatientFormState = {
   on_na_therapy: boolean;
   bepirovirsen_eligible: boolean;
   started_bepirovirsen: boolean;
+  opted_out_secondary_use: boolean;
   baseline_hbsag: string;
   baseline_hbv_dna: string;
   baseline_alt: string;
@@ -259,6 +260,16 @@ type PatientFormState = {
   bilirubin: string;
   albumin: string;
   inr: string;
+  notes: string;
+};
+
+type ConsentFormState = {
+  patient_pseudonym: string;
+  legal_basis: string;
+  article_9_condition: string;
+  purpose: string;
+  retention_until: string;
+  residency_region: string;
   notes: string;
 };
 
@@ -322,6 +333,7 @@ const initialPatientForm: PatientFormState = {
   on_na_therapy: false,
   bepirovirsen_eligible: false,
   started_bepirovirsen: false,
+  opted_out_secondary_use: false,
   baseline_hbsag: '',
   baseline_hbv_dna: '',
   baseline_alt: '',
@@ -330,6 +342,16 @@ const initialPatientForm: PatientFormState = {
   bilirubin: '',
   albumin: '',
   inr: '',
+  notes: '',
+};
+
+const initialConsentForm: ConsentFormState = {
+  patient_pseudonym: '',
+  legal_basis: 'public_interest',
+  article_9_condition: 'scientific_research',
+  purpose: 'research',
+  retention_until: '',
+  residency_region: 'EU',
   notes: '',
 };
 
@@ -461,6 +483,8 @@ function App() {
   const [permitForm, setPermitForm] = useState<PermitFormState>(initialPermitForm);
   const [tamperBlock, setTamperBlock] = useState('');
   const [tamperResult, setTamperResult] = useState('');
+  const [consentForm, setConsentForm] = useState<ConsentFormState>(initialConsentForm);
+  const [savingConsent, setSavingConsent] = useState(false);
 
 
   const loadAll = async () => {
@@ -601,6 +625,13 @@ function App() {
     setPermitForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleConsentChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = event.target;
+    setConsentForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleDatasetSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSavingDataset(true);
@@ -657,6 +688,7 @@ function App() {
       payload.append('on_na_therapy', String(patientForm.on_na_therapy));
       payload.append('bepirovirsen_eligible', String(patientForm.bepirovirsen_eligible));
       payload.append('started_bepirovirsen', String(patientForm.started_bepirovirsen));
+      payload.append('opted_out_secondary_use', String(patientForm.opted_out_secondary_use));
       appendIfPresent(payload, 'baseline_hbsag', patientForm.baseline_hbsag);
       appendIfPresent(payload, 'baseline_hbv_dna', patientForm.baseline_hbv_dna);
       appendIfPresent(payload, 'baseline_alt', patientForm.baseline_alt);
@@ -792,6 +824,38 @@ function App() {
       );
     } catch {
       setVerificationNotice('Verification request failed.');
+    }
+  };
+
+  const handleConsentSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setSavingConsent(true);
+    setNotice('');
+    try {
+      const payload = new FormData();
+      payload.append('patient_pseudonym', consentForm.patient_pseudonym);
+      payload.append('legal_basis', consentForm.legal_basis);
+      payload.append('article_9_condition', consentForm.article_9_condition);
+      payload.append('purpose', consentForm.purpose);
+      payload.append('status', 'active');
+      if (consentForm.retention_until) {
+        payload.append('retention_until', consentForm.retention_until);
+      }
+      payload.append('residency_region', consentForm.residency_region);
+      payload.append('notes', consentForm.notes);
+
+      const response = await fetch(`${API_BASE}/prototype/consents`, {
+        method: 'POST',
+        body: payload,
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      await loadAll();
+      setNotice(`Governance basis registered for ${consentForm.patient_pseudonym}.`);
+      setConsentForm(initialConsentForm);
+    } catch {
+      setNotice('Consent record could not be stored.');
+    } finally {
+      setSavingConsent(false);
     }
   };
 
@@ -1214,6 +1278,149 @@ function App() {
           <section className="section">
             <div className="section-header">
               <div>
+                <h2>Governance basis (consent)</h2>
+                <p className="section-copy">
+                  Register an active governance basis record for a patient pseudonym before
+                  creating their baseline record. Required under GDPR Article 9 and EHDS
+                  secondary-use rules.
+                </p>
+              </div>
+            </div>
+
+            <div className="two-column">
+              <div className="panel">
+                <div className="section-header compact">
+                  <div>
+                    <h2>Register governance basis</h2>
+                    <p className="section-copy">
+                      Links a legal basis and Article 9 condition to a patient pseudonym.
+                    </p>
+                  </div>
+                </div>
+                <form onSubmit={handleConsentSubmit}>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Patient pseudonym</span>
+                      <input
+                        name="patient_pseudonym"
+                        value={consentForm.patient_pseudonym}
+                        onChange={handleConsentChange}
+                        placeholder="e.g. PT-2026-001"
+                        required
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Legal basis</span>
+                      <select
+                        name="legal_basis"
+                        value={consentForm.legal_basis}
+                        onChange={handleConsentChange}
+                      >
+                        <option value="public_interest">Public interest (Art. 6(1)(e))</option>
+                        <option value="scientific_research">Scientific research (Art. 6(1)(e) + 9(2)(j))</option>
+                        <option value="consent">Explicit consent (Art. 6(1)(a) + 9(2)(a))</option>
+                        <option value="vital_interests">Vital interests (Art. 9(2)(c))</option>
+                      </select>
+                    </label>
+
+                    <label className="field">
+                      <span>Article 9 condition</span>
+                      <select
+                        name="article_9_condition"
+                        value={consentForm.article_9_condition}
+                        onChange={handleConsentChange}
+                      >
+                        <option value="scientific_research">Scientific research (9(2)(j))</option>
+                        <option value="explicit_consent">Explicit consent (9(2)(a))</option>
+                        <option value="public_health">Public health (9(2)(i))</option>
+                        <option value="vital_interests">Vital interests (9(2)(c))</option>
+                      </select>
+                    </label>
+
+                    <label className="field">
+                      <span>Purpose</span>
+                      <select
+                        name="purpose"
+                        value={consentForm.purpose}
+                        onChange={handleConsentChange}
+                      >
+                        <option value="research">Research</option>
+                        <option value="patient_safety">Patient safety</option>
+                        <option value="personalized_medicine">Personalized medicine</option>
+                        <option value="regulatory">Regulatory</option>
+                      </select>
+                    </label>
+
+                    <label className="field">
+                      <span>Retention until</span>
+                      <input
+                        type="date"
+                        name="retention_until"
+                        value={consentForm.retention_until}
+                        onChange={handleConsentChange}
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Residency region</span>
+                      <select
+                        name="residency_region"
+                        value={consentForm.residency_region}
+                        onChange={handleConsentChange}
+                      >
+                        <option value="EU">EU</option>
+                        <option value="EEA">EEA</option>
+                        <option value="UK">UK</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </label>
+
+                    <label className="field field-full">
+                      <span>Notes</span>
+                      <textarea
+                        name="notes"
+                        value={consentForm.notes}
+                        onChange={handleConsentChange}
+                        rows={2}
+                        placeholder="Scope restrictions, data minimisation notes, or governance comments."
+                      />
+                    </label>
+                  </div>
+                  <div className="action-row">
+                    <button type="submit" disabled={savingConsent}>
+                      {savingConsent ? 'Saving...' : 'Register governance basis'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="panel">
+                <div className="section-header compact">
+                  <div>
+                    <h2>Why this matters</h2>
+                    <p className="section-copy">
+                      GDPR Article 9 prohibits processing special category health data
+                      without a lawful basis. EHDS secondary-use rules require that each
+                      patient record is linked to an active governance basis before it
+                      enters the research layer.
+                    </p>
+                  </div>
+                </div>
+                <ul className="finding-list">
+                  <li>Art. 9(2)(j) — scientific research with appropriate safeguards</li>
+                  <li>Art. 9(2)(a) — explicit consent of the data subject</li>
+                  <li>EHDS Art. 71 — opt-out right must be enforced at data layer</li>
+                  <li>ICH E6(R3) — documented consent trail required for GCP compliance</li>
+                  <li>Retention period enforced — records expire automatically</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section className="section">
+            <div className="section-header">
+              <div>
                 <h2>Clinical HBV patient pathway</h2>
                 <p className="section-copy">
                   The patient workflow is now organized into screening, baseline, treatment,
@@ -1465,6 +1672,19 @@ function App() {
                       checked={patientForm.started_bepirovirsen}
                       onChange={handlePatientChange}
                     />
+                  </label>
+
+                  <label className="field">
+                    <span>Secondary-use opt-out (EHDS Art. 71)</span>
+                    <div className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        name="opted_out_secondary_use"
+                        checked={patientForm.opted_out_secondary_use}
+                        onChange={handlePatientChange}
+                      />
+                      <span>Patient has opted out of secondary use</span>
+                    </div>
                   </label>
 
                   <label className="field field-full">
