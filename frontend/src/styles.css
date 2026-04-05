@@ -1,0 +1,551 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --line: #d8deeb;
+  --line-strong: #c8d3e6;
+  --text: #10213c;
+  --muted: #5d6b85;
+  --accent: #2454d3;
+  --accent-soft: #e9efff;
+  --warning: #fff2d9;
+  --success: #e5f7ec;
+  --success-text: #147b46;
+  --shadow: 0 14px 36px rgba(13, 26, 60, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+input,
+select,
+textarea,
+table {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--text);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.page-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.hero-card,
+.panel,
+.kpi-card,
+.challenge-card,
+.lifecycle-card,
+.readiness-card,
+.notice {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.hero-card {
+  padding: 28px;
+  display: grid;
+  gap: 18px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  margin: 12px 0 8px;
+  font-size: 44px;
+  line-height: 1.05;
+}
+
+h2 {
+  margin: 0;
+  font-size: 28px;
+}
+
+h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.hero-copy,
+.section-copy,
+.stage-description,
+.readiness-card p,
+.challenge-card p,
+.kpi-note,
+.finding-list,
+.next-step-list,
+.ledger-table,
+.field small,
+.mini-note {
+  color: var(--muted);
+}
+
+.mini-note {
+  margin-top: 10px;
+  line-height: 1.55;
+}
+
+.badge-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.badge,
+.status-chip,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.badge {
+  background: #eef3ff;
+  color: #274bc6;
+  border: 1px solid #d7e2ff;
+}
+
+.notice {
+  margin-top: 18px;
+  padding: 14px 18px;
+}
+
+.notice.warning {
+  background: var(--warning);
+}
+
+.notice.success {
+  background: var(--success);
+  color: var(--success-text);
+}
+
+.section {
+  margin-top: 28px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.section-header.compact {
+  margin-bottom: 18px;
+}
+
+.form-grid,
+.challenge-grid,
+.kpi-grid,
+.lifecycle-grid,
+.readiness-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field span {
+  font-weight: 600;
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+.field-checkbox {
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-height: 52px;
+}
+
+.field-checkbox input {
+  width: auto;
+  transform: scale(1.15);
+}
+
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+
+button {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  background: var(--accent);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.secondary-button {
+  background: #eef3ff;
+  color: var(--accent);
+}
+
+.challenge-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.challenge-card {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  padding: 18px;
+}
+
+.challenge-number {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1f5ff;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kpi-card {
+  padding: 22px;
+}
+
+.kpi-label {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.kpi-value {
+  margin-top: 10px;
+  font-size: 42px;
+  font-weight: 800;
+}
+
+.kpi-note {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.lifecycle-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lifecycle-card {
+  position: relative;
+  padding: 22px;
+  min-height: 260px;
+}
+
+.lifecycle-card.complete {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.lifecycle-card.warning {
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+}
+
+.lifecycle-card.active {
+  background: linear-gradient(180deg, #ffffff 0%, #f2f8ff 100%);
+}
+
+.lifecycle-topline,
+.readiness-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stage-number {
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+.status-pill.complete,
+.status-chip.verified {
+  background: var(--success);
+  color: var(--success-text);
+}
+
+.status-pill.warning,
+.status-chip.monitor {
+  background: var(--warning);
+  color: #9b6800;
+}
+
+.status-pill.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.check-list {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.stage-arrow {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 30px;
+  color: #8fa1c5;
+}
+
+.two-column {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1.5fr 1fr;
+}
+
+.panel {
+  padding: 22px;
+}
+
+.clinical-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.clinical-section {
+  border: 1px solid var(--line-strong);
+  background: #fbfcff;
+  border-radius: 20px;
+  padding: 18px;
+  margin-top: 18px;
+}
+
+.clinical-section:first-of-type {
+  margin-top: 0;
+}
+
+.clinical-section-header {
+  margin-bottom: 14px;
+}
+
+.clinical-section-header h3 {
+  margin-bottom: 6px;
+}
+
+.care-pathway {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pathway-step {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pathway-step span {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.pathway-step strong {
+  font-size: 15px;
+}
+
+.pathway-step small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pathway-step.active {
+  border-color: #c9d7ff;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+}
+
+.stack-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger-table-wrap {
+  overflow: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.ledger-table th,
+.ledger-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #e6ebf5;
+  vertical-align: top;
+}
+
+.ledger-table th {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  color: #2c426e;
+}
+
+.finding-list,
+.next-step-list {
+  margin: 0;
+  padding-left: 22px;
+  line-height: 1.65;
+}
+
+.chart-panel {
+  min-height: 420px;
+}
+
+.chart-wrap {
+  width: 100%;
+  height: 300px;
+}
+
+.readiness-grid {
+  grid-template-columns: 1fr;
+}
+
+.readiness-card {
+  padding: 16px 18px;
+}
+
+@media (max-width: 1280px) {
+  .care-pathway {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .form-grid,
+  .challenge-grid,
+  .kpi-grid,
+  .lifecycle-grid,
+  .two-column {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stage-arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .page-shell {
+    padding: 18px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  .form-grid,
+  .challenge-grid,
+  .kpi-grid,
+  .lifecycle-grid,
+  .two-column,
+  .care-pathway {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card,
+  .panel,
+  .kpi-card,
+  .challenge-card,
+  .lifecycle-card,
+  .readiness-card,
+  .notice,
+  .clinical-section {
+    border-radius: 18px;
+  }
+}
