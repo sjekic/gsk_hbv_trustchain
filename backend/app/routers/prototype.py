@@ -6,6 +6,7 @@ from ..services.demo_data import (
     create_patient_visit,
     create_prototype_patient,
     create_prototype_submission,
+    get_export_anonymization_status,
     get_prototype_dashboard,
     get_prototype_patients,
     get_prototype_submissions,
@@ -107,6 +108,15 @@ def _restricted_dashboard_payload() -> dict:
             "mapping_gaps": [
                 "Dashboard access is locked until an active secondary-use data access permit is registered."
             ],
+        },
+        "export_gate": {
+            "passed": False,
+            "message": "Export blocked. No active permit is registered.",
+            "k_threshold": 5,
+            "eligible_patients": 0,
+            "opted_out_patients": 0,
+            "smallest_cell": 0,
+            "failing_cells": [],
         },
         "data_lifecycle": [],
         "ledger": [],
@@ -433,6 +443,7 @@ def create_patient(
     on_na_therapy: bool = Form(False),
     bepirovirsen_eligible: bool = Form(False),
     started_bepirovirsen: bool = Form(False),
+    opted_out_secondary_use: bool = Form(False),
     baseline_hbsag: float | None = Form(None),
     baseline_hbv_dna: float | None = Form(None),
     baseline_alt: float | None = Form(None),
@@ -476,6 +487,7 @@ def create_patient(
         on_na_therapy=on_na_therapy,
         bepirovirsen_eligible=bepirovirsen_eligible,
         started_bepirovirsen=started_bepirovirsen,
+        opted_out_secondary_use=opted_out_secondary_use,
         baseline_hbsag=baseline_hbsag,
         baseline_hbv_dna=baseline_hbv_dna,
         baseline_alt=baseline_alt,
@@ -588,6 +600,26 @@ def create_visit(
         "ledger_entry": ledger_entry,
     }
 
+@router.get("/export/check-anonymization")
+def check_export_anonymization(
+    user: AuthenticatedUser = Depends(get_current_user),
+):
+    permit = _require_active_permit(
+        user=user,
+        action="check_export_anonymization",
+        resource_type="export",
+        resource_id="results",
+    )
+    result = get_export_anonymization_status()
+    log_access_event(
+        user=user,
+        action="check_export_anonymization",
+        resource_type="export",
+        resource_id="results",
+        decision="allowed" if result.get("passed") else "warning",
+        permit_id=permit["permit_id"],
+    )
+    return result
 
 @router.get("/patients/{patient_id}/verify")
 def verify_patient(

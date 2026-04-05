@@ -1373,6 +1373,90 @@
       "decision": "allowed",
       "detail": "",
       "permit_id": null
+    },
+    {
+      "id": "c8eb07c0ed3a",
+      "timestamp": "2026-04-05T19:49:55Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "a908487c2a54",
+      "timestamp": "2026-04-05T19:49:55Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "28dece1ff7d3",
+      "timestamp": "2026-04-05T19:57:48Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "599bef90c8bc",
+      "timestamp": "2026-04-05T19:57:48Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "282f3b3c9816",
+      "timestamp": "2026-04-05T19:57:48Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "62b0309139f6",
+      "timestamp": "2026-04-05T19:57:48Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
     }
   ],
   "permits": []
