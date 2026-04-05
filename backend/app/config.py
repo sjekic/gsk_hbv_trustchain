@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
 
     auth_mode: str = "dev"  # "dev" or "keycloak"
-    demo_default_user: str = "clinician_anna"
+    demo_default_user: str = "steward_mateo"
 
     keycloak_server_url: str = ""
     keycloak_realm: str = ""

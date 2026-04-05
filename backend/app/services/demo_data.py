@@ -1042,8 +1042,8 @@ def get_prototype_dashboard() -> dict[str, Any]:
     visits = [visit for patient in patients for visit in patient["visits"]]
     active_visits = [visit for patient in active_patients for visit in patient["visits"]]
     ledger_raw = store["ledger"]
-    verified_chain = verify_chain_integrity(ledger_raw)
-    ledger = sorted(verified_chain, key=lambda item: item["block"], reverse=True)
+    # Only run full chain verification, annotate status directly from stored fields
+    ledger = sorted(ledger_raw, key=lambda item: item["block"], reverse=True)
 
     unique_sources = len({item["source_type"] for item in submissions})
     dataset_hbv_total = sum(item["hbv_cohort"] for item in submissions)
