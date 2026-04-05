@@ -1,8 +1,126 @@
 {
-  "submissions": [],
-  "ledger": [],
+  "submissions": [
+    {
+      "id": "7f68e94dea8d",
+      "created_at": "2026-04-05T21:59:49Z",
+      "site_name": "GSK B-Well Site 01",
+      "source_type": "EHR",
+      "country": "DE",
+      "operator_id": "OP-001",
+      "record_count": 100,
+      "hbv_cohort": 100,
+      "bepirovirsen_treated": 85,
+      "dq_score": 90.0,
+      "readiness_score": 85.0,
+      "schema_signed": true,
+      "temporal_issue_count": 0,
+      "needs_vocab_remap": false,
+      "notes": "",
+      "file_name": null,
+      "artifact_hash": "7445aadf9babc7f04ab0eecaaae7740cd5d3c8099655c51734ea0f35a69ed8bd",
+      "ledger_block": 201,
+      "verification_status": "verified"
+    },
+    {
+      "id": "7ba4f93cb529",
+      "created_at": "2026-04-05T22:00:54Z",
+      "site_name": "GSK B-Well Site 01",
+      "source_type": "EHR",
+      "country": "DE",
+      "operator_id": "OP-001",
+      "record_count": 100,
+      "hbv_cohort": 100,
+      "bepirovirsen_treated": 85,
+      "dq_score": 90.0,
+      "readiness_score": 85.0,
+      "schema_signed": true,
+      "temporal_issue_count": 0,
+      "needs_vocab_remap": false,
+      "notes": "",
+      "file_name": null,
+      "artifact_hash": "7445aadf9babc7f04ab0eecaaae7740cd5d3c8099655c51734ea0f35a69ed8bd",
+      "ledger_block": 202,
+      "verification_status": "verified"
+    },
+    {
+      "id": "67871e519378",
+      "created_at": "2026-04-05T22:17:44Z",
+      "site_name": "GSK B-Well Site 03",
+      "source_type": "EHR",
+      "country": "ES",
+      "operator_id": "OP-003",
+      "record_count": 100,
+      "hbv_cohort": 100,
+      "bepirovirsen_treated": 20,
+      "dq_score": 90.0,
+      "readiness_score": 89.0,
+      "schema_signed": true,
+      "temporal_issue_count": 0,
+      "needs_vocab_remap": false,
+      "notes": "",
+      "file_name": null,
+      "artifact_hash": "aa22918094a7902ef85dbe141d534eef33ed9bf33a506d5ca14599e89e9939b2",
+      "ledger_block": 203,
+      "verification_status": "verified"
+    }
+  ],
+  "ledger": [
+    {
+      "block": 201,
+      "artifact": "ehr_7f68e94dea8d.json",
+      "event": "Submission notarized in simulated ledger",
+      "hash": "tampered_7445aadf9babc7f04ab0eecaaae7740cd5d3c8099655c51734ea0f3",
+      "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signer": "OP-001",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "block_hash": "b009f4581af1d0f63166c3c3dd2a92f8e30be3cf4857ddf6c511c8c4cef9cac3",
+      "status": "tampered",
+      "omop_domain": "VISIT_OCCURRENCE",
+      "submission_id": "7f68e94dea8d"
+    },
+    {
+      "block": 202,
+      "artifact": "ehr_7ba4f93cb529.json",
+      "event": "Submission notarized in simulated ledger",
+      "hash": "tampered_7445aadf9babc7f04ab0eecaaae7740cd5d3c8099655c51734ea0f3",
+      "previous_hash": "b009f4581af1d0f63166c3c3dd2a92f8e30be3cf4857ddf6c511c8c4cef9cac3",
+      "signer": "OP-001",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "block_hash": "06d72fd48831f1ce96864f5dd84674c6a5d5f0ac8d5e7275d6d1a632f2313400",
+      "status": "tampered",
+      "omop_domain": "VISIT_OCCURRENCE",
+      "submission_id": "7ba4f93cb529"
+    },
+    {
+      "block": 203,
+      "artifact": "ehr_67871e519378.json",
+      "event": "Submission notarized in simulated ledger",
+      "hash": "tampered_aa22918094a7902ef85dbe141d534eef33ed9bf33a506d5ca14599e",
+      "previous_hash": "06d72fd48831f1ce96864f5dd84674c6a5d5f0ac8d5e7275d6d1a632f2313400",
+      "signer": "OP-003",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "block_hash": "09a1dae2147361b262278be6d1dfb50f3cbaad659f7f4b667f0e301d266e5ac1",
+      "status": "tampered",
+      "omop_domain": "VISIT_OCCURRENCE",
+      "submission_id": "67871e519378"
+    }
+  ],
   "patients": [],
-  "consents": [],
+  "consents": [
+    {
+      "id": "ce81ec168125",
+      "created_at": "2026-04-05T22:21:39Z",
+      "created_by": "steward_mateo",
+      "patient_pseudonym": "PT-2026-001",
+      "legal_basis": "public_interest",
+      "article_9_condition": "scientific_research",
+      "purpose": "research",
+      "status": "active",
+      "retention_until": "2027-01-04",
+      "residency_region": "EU",
+      "notes": ""
+    }
+  ],
   "access_audit": [
     {
       "id": "966c6bbf2482",
@@ -126,6 +244,1266 @@
       "action": "list_patients",
       "resource_type": "patient",
       "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "629ee861afe8",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "93c80b92cc8e",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "45d6f0b31c9e",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "7cfd3f16227b",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "0be8028f582f",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "bb3432370c1a",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "99f9661ea41c",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "e7bd79be2d80",
+      "timestamp": "2026-04-05T21:58:04Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "867e66897146",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "create_submission",
+      "resource_type": "submission",
+      "resource_id": "7f68e94dea8d",
+      "decision": "allowed",
+      "detail": "block=201",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "ac41e39e731e",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "1a97ee176778",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "603034db4a83",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "07c1f864a4cb",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "406c1a8d2128",
+      "timestamp": "2026-04-05T21:59:49Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "93a8f71c78b3",
+      "timestamp": "2026-04-05T22:00:03Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "check_export_anonymization",
+      "resource_type": "export",
+      "resource_id": "results",
+      "decision": "warning",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "1c199ee5da3d",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "create_submission",
+      "resource_type": "submission",
+      "resource_id": "7ba4f93cb529",
+      "decision": "allowed",
+      "detail": "block=202",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c7bc819e9ab2",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c47f4d95df6f",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "9c7c0d2949b9",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "908b25f3fbfe",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "53645505ab88",
+      "timestamp": "2026-04-05T22:00:54Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "ce2ab4655a78",
+      "timestamp": "2026-04-05T22:03:25Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "tamper_simulate",
+      "resource_type": "ledger",
+      "resource_id": "201",
+      "decision": "allowed",
+      "detail": "Block 201 hash corrupted. 1 block(s) now broken.",
+      "permit_id": null
+    },
+    {
+      "id": "dae60e8546d9",
+      "timestamp": "2026-04-05T22:03:25Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "a131a6e11a87",
+      "timestamp": "2026-04-05T22:03:25Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "7d1e4858b771",
+      "timestamp": "2026-04-05T22:03:25Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "974c80481a40",
+      "timestamp": "2026-04-05T22:03:25Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "f091b5f0d918",
+      "timestamp": "2026-04-05T22:03:25Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "f3ccd53b918d",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c2b7679be439",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "6d7242a4fc26",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "79c3d3b1663d",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "3f3e83ce69b9",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "649db236c128",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "e3520e2365ba",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c983d1db3a6c",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "9a18643c5070",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "489dc9a6ed70",
+      "timestamp": "2026-04-05T22:04:06Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c0719ac455da",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "create_submission",
+      "resource_type": "submission",
+      "resource_id": "67871e519378",
+      "decision": "allowed",
+      "detail": "block=203",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "d2889d34ae36",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "739f477bc867",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "a404825b912d",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c1cca2624b22",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "b5fc94260881",
+      "timestamp": "2026-04-05T22:17:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "325d7ac342d8",
+      "timestamp": "2026-04-05T22:18:29Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "tamper_simulate",
+      "resource_type": "ledger",
+      "resource_id": "202",
+      "decision": "allowed",
+      "detail": "Block 202 hash corrupted. 2 block(s) now broken.",
+      "permit_id": null
+    },
+    {
+      "id": "95ec8ea553be",
+      "timestamp": "2026-04-05T22:18:29Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "442ea4dfdfae",
+      "timestamp": "2026-04-05T22:18:29Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "a0961545e286",
+      "timestamp": "2026-04-05T22:18:29Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "2de676b726e0",
+      "timestamp": "2026-04-05T22:18:29Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "c0b3cfb4e4a7",
+      "timestamp": "2026-04-05T22:18:29Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "fb3a205aa8b4",
+      "timestamp": "2026-04-05T22:18:36Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "tamper_simulate",
+      "resource_type": "ledger",
+      "resource_id": "203",
+      "decision": "allowed",
+      "detail": "Block 203 hash corrupted. 3 block(s) now broken.",
+      "permit_id": null
+    },
+    {
+      "id": "78404f8e4fde",
+      "timestamp": "2026-04-05T22:18:37Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "603731ddc351",
+      "timestamp": "2026-04-05T22:18:37Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "9dfccb9956ac",
+      "timestamp": "2026-04-05T22:18:37Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "a4e2bfd245a2",
+      "timestamp": "2026-04-05T22:18:37Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "acc28f342a00",
+      "timestamp": "2026-04-05T22:18:37Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "2d061f877b2a",
+      "timestamp": "2026-04-05T22:18:41Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "dd469beac0d4",
+      "timestamp": "2026-04-05T22:18:41Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "40835d380d41",
+      "timestamp": "2026-04-05T22:18:41Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "86ce8669caab",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "8134e3efa73c",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "ee0179f5b2ec",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "2a46fa46c953",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "eb52151425df",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "08a022fdb381",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "cd27e3e04e07",
+      "timestamp": "2026-04-05T22:18:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "ec5f22413d9b",
+      "timestamp": "2026-04-05T22:21:39Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "create_consent",
+      "resource_type": "consent",
+      "resource_id": "ce81ec168125",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "4fe7d43044e5",
+      "timestamp": "2026-04-05T22:21:39Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "d4699fdf1a0e",
+      "timestamp": "2026-04-05T22:21:39Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "faf963e6055b",
+      "timestamp": "2026-04-05T22:21:40Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "91474bda89d0",
+      "timestamp": "2026-04-05T22:21:40Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "55980368b27e",
+      "timestamp": "2026-04-05T22:21:40Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "40d212bfd0ee",
+      "timestamp": "2026-04-05T22:25:41Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "44099581fbc1",
+      "timestamp": "2026-04-05T22:25:41Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "adbbee751035",
+      "timestamp": "2026-04-05T22:25:41Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "3fab5ae6aa58",
+      "timestamp": "2026-04-05T22:25:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "4b879c24ac7d",
+      "timestamp": "2026-04-05T22:25:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "9bee0f864fbd",
+      "timestamp": "2026-04-05T22:25:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "df774e3c5ec4",
+      "timestamp": "2026-04-05T22:25:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "a898f321f5c3",
+      "timestamp": "2026-04-05T22:25:42Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "cb17d32465d9",
+      "timestamp": "2026-04-05T22:25:43Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "4be058f89879",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "bd26491ce8c6",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "fe55597e2d2c",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "4e3b5fff6632",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "1c19aa376ba1",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "e918a4dd9e2e",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "4335909360b6",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "0abae30820a9",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "aae246f5cd98",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "0059eb92a817",
+      "timestamp": "2026-04-05T22:25:56Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_hbsag_trajectory",
+      "resource_type": "analytics",
+      "resource_id": "hbsag_trajectory",
       "decision": "allowed",
       "detail": "",
       "permit_id": "EHDS-2026-001"
