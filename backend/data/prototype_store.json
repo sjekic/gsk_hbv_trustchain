@@ -3,6 +3,146 @@
   "ledger": [],
   "patients": [],
   "consents": [],
-  "access_audit": [],
-  "permits": []
+  "access_audit": [
+    {
+      "id": "966c6bbf2482",
+      "timestamp": "2026-04-05T21:48:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "d0d9c1f5033b",
+      "timestamp": "2026-04-05T21:48:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "bced6235d993",
+      "timestamp": "2026-04-05T21:48:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "39b8056c8f76",
+      "timestamp": "2026-04-05T21:48:44Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "888b2672cd3e",
+      "timestamp": "2026-04-05T21:48:57Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "create_permit",
+      "resource_type": "permit",
+      "resource_id": "EHDS-2026-001",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "d715752c27dd",
+      "timestamp": "2026-04-05T21:48:57Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "allowed",
+      "detail": "permit=EHDS-2026-001",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "bd265d0ddd80",
+      "timestamp": "2026-04-05T21:48:57Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "20692971aa88",
+      "timestamp": "2026-04-05T21:48:57Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_submissions",
+      "resource_type": "submission",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    },
+    {
+      "id": "ec57079cbea4",
+      "timestamp": "2026-04-05T21:48:57Z",
+      "username": "steward_mateo",
+      "roles": [
+        "data_steward"
+      ],
+      "action": "list_patients",
+      "resource_type": "patient",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": "EHDS-2026-001"
+    }
+  ],
+  "permits": [
+    {
+      "id": "3a9e51d672a2",
+      "created_at": "2026-04-05T21:48:57Z",
+      "created_by": "steward_mateo",
+      "permit_id": "EHDS-2026-001",
+      "requesting_organization": "GSK RWE Team",
+      "purpose_code": "research",
+      "expiry_date": "2027-01-01",
+      "issuing_hdab": "Simulated HDAB",
+      "status": "active",
+      "notes": ""
+    }
+  ]
 }
