@@ -1261,6 +1261,118 @@
       "decision": "allowed",
       "detail": "",
       "permit_id": null
+    },
+    {
+      "id": "c2ee0ed5c960",
+      "timestamp": "2026-04-05T19:17:50Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "1a15a6a390a8",
+      "timestamp": "2026-04-05T19:17:50Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "82318e20d430",
+      "timestamp": "2026-04-05T19:17:50Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "baf06bb5e3a5",
+      "timestamp": "2026-04-05T19:17:50Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "11219bccee12",
+      "timestamp": "2026-04-05T19:19:43Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "e35699fa5ca2",
+      "timestamp": "2026-04-05T19:19:43Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "read_dashboard",
+      "resource_type": "dashboard",
+      "resource_id": "prototype",
+      "decision": "blocked",
+      "detail": "No active data access permit",
+      "permit_id": null
+    },
+    {
+      "id": "8d9cd5260e90",
+      "timestamp": "2026-04-05T19:19:44Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
+    },
+    {
+      "id": "25cebe27511b",
+      "timestamp": "2026-04-05T19:19:44Z",
+      "username": "clinician_anna",
+      "roles": [
+        "clinician"
+      ],
+      "action": "list_permits",
+      "resource_type": "permit",
+      "resource_id": "all",
+      "decision": "allowed",
+      "detail": "",
+      "permit_id": null
     }
   ],
   "permits": []
