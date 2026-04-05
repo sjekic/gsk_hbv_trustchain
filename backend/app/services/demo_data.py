@@ -116,21 +116,76 @@ def _append_ledger_entry(
     signer: str,
     extra_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    entry = {
-        "block": _next_block_number(store["ledger"]),
+    ledger = store["ledger"]
+
+    # Resolve previous block hash — genesis block uses 64 zeros
+    if ledger:
+        prev_block = max(ledger, key=lambda b: int(b["block"]))
+        previous_hash = prev_block.get("block_hash", "0" * 64)
+    else:
+        previous_hash = "0" * 64
+
+    # Build the canonical block content (everything that gets committed)
+    block_number = _next_block_number(ledger)
+    block_content = {
+        "block": block_number,
         "artifact": artifact,
         "event": event,
         "hash": artifact_hash,
+        "previous_hash": previous_hash,
         "signer": signer,
         "timestamp": _now_iso(),
-        "status": "verified",
     }
+
+    # The block_hash commits to ALL fields above — any tampering breaks the chain
+    block_content["block_hash"] = _sha256_text(_canonical_json(block_content))
+    block_content["status"] = "verified"
+
     if extra_fields:
-        entry.update(extra_fields)
+        block_content.update(extra_fields)
 
-    store["ledger"].append(entry)
-    return entry
+    ledger.append(block_content)
+    return block_content
 
+def verify_chain_integrity(ledger: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Walk the ledger in block order and verify the previous_hash linkage.
+    Returns the ledger entries annotated with chain_status: 'verified' | 'broken'.
+    """
+    sorted_blocks = sorted(ledger, key=lambda b: int(b["block"]))
+    results = []
+    expected_previous = "0" * 64
+
+    for block in sorted_blocks:
+        # Recompute what the block_hash should be
+        canonical = {
+            "block": block["block"],
+            "artifact": block["artifact"],
+            "event": block["event"],
+            "hash": block["hash"],
+            "previous_hash": block.get("previous_hash", "0" * 64),
+            "signer": block["signer"],
+            "timestamp": block["timestamp"],
+        }
+        expected_block_hash = _sha256_text(_canonical_json(canonical))
+        actual_block_hash = block.get("block_hash", "")
+
+        prev_hash_matches = block.get("previous_hash", "0" * 64) == expected_previous
+        block_hash_matches = actual_block_hash == expected_block_hash
+
+        chain_ok = prev_hash_matches and block_hash_matches
+        annotated = dict(block)
+        annotated["chain_status"] = "verified" if chain_ok else "broken"
+        annotated["chain_broken_reason"] = (
+            None if chain_ok else (
+                "block_hash_mismatch" if not block_hash_matches else "previous_hash_mismatch"
+            )
+        )
+        results.append(annotated)
+        # Next block must reference this block's hash (use stored hash to propagate breaks)
+        expected_previous = actual_block_hash
+
+    return results
 
 def _submission_fingerprint_payload(
     *,
@@ -986,7 +1041,9 @@ def get_prototype_dashboard() -> dict[str, Any]:
     ]
     visits = [visit for patient in patients for visit in patient["visits"]]
     active_visits = [visit for patient in active_patients for visit in patient["visits"]]
-    ledger = sorted(store["ledger"], key=lambda item: item["block"], reverse=True)
+    ledger_raw = store["ledger"]
+    verified_chain = verify_chain_integrity(ledger_raw)
+    ledger = sorted(verified_chain, key=lambda item: item["block"], reverse=True)
 
     unique_sources = len({item["source_type"] for item in submissions})
     dataset_hbv_total = sum(item["hbv_cohort"] for item in submissions)

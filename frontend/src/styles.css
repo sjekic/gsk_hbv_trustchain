@@ -137,6 +137,11 @@ h3 {
   font-size: 13px;
   font-weight: 700;
 }
+.status-chip.tampered {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
 
 .badge {
   background: #eef3ff;

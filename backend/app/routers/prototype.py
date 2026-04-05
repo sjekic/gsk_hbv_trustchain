@@ -621,6 +621,87 @@ def check_export_anonymization(
     )
     return result
 
+@router.get("/ledger/chain-integrity")
+def ledger_chain_integrity(user: AuthenticatedUser = Depends(get_current_user)):
+    """
+    Returns the full ledger with per-block chain_status annotation.
+    Used by the tamper simulation panel on the frontend.
+    """
+    permit = _require_active_permit(
+        user=user,
+        action="read_chain_integrity",
+        resource_type="ledger",
+        resource_id="chain",
+    )
+    from ..services.demo_data import _load_store, verify_chain_integrity
+
+    store = _load_store()
+    chain = verify_chain_integrity(store["ledger"])
+    broken_count = sum(1 for b in chain if b["chain_status"] == "broken")
+
+    log_access_event(
+        user=user,
+        action="read_chain_integrity",
+        resource_type="ledger",
+        resource_id="chain",
+        decision="allowed",
+        permit_id=permit["permit_id"],
+    )
+    return {
+        "chain": sorted(chain, key=lambda b: b["block"]),
+        "total_blocks": len(chain),
+        "broken_blocks": broken_count,
+        "chain_intact": broken_count == 0,
+    }
+
+
+@router.post("/ledger/tamper-simulate")
+def tamper_simulate(
+    block_number: int = Form(...),
+    user: AuthenticatedUser = Depends(require_roles("data_steward", "site_admin")),
+):
+    """
+    Corrupts the artifact hash of a given block to demonstrate tamper detection.
+    Only works in dev/prototype mode — never in production.
+    """
+    from ..services.demo_data import (
+        _load_store,
+        _save_store,
+        verify_chain_integrity,
+    )
+
+    store = _load_store()
+    target = next(
+        (b for b in store["ledger"] if int(b["block"]) == block_number), None
+    )
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"Block {block_number} not found.")
+
+    # Corrupt the artifact hash — leaves block_hash and previous_hash intact
+    # so the mismatch is detected by verify_chain_integrity
+    original_hash = target["hash"]
+    target["hash"] = "tampered_" + original_hash[:55]
+    target["status"] = "tampered"
+    _save_store(store)
+
+    chain = verify_chain_integrity(store["ledger"])
+    broken = [b for b in chain if b["chain_status"] == "broken"]
+
+    log_access_event(
+        user=user,
+        action="tamper_simulate",
+        resource_type="ledger",
+        resource_id=str(block_number),
+        decision="allowed",
+        detail=f"Block {block_number} hash corrupted. {len(broken)} block(s) now broken.",
+        permit_id=None,
+    )
+    return {
+        "tampered_block": block_number,
+        "broken_blocks": [b["block"] for b in broken],
+        "message": f"Block {block_number} corrupted. {len(broken)} block(s) now fail chain verification.",
+    }
+
 @router.get("/patients/{patient_id}/verify")
 def verify_patient(
     patient_id: str,

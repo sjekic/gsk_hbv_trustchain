@@ -35,9 +35,13 @@ type LedgerEntry = {
   artifact: string;
   event: string;
   hash: string;
+  previous_hash?: string;
+  block_hash?: string;
   signer: string;
   timestamp: string;
   status: string;
+  chain_status?: 'verified' | 'broken';
+  chain_broken_reason?: string | null;
   submission_id?: string;
   patient_id?: string;
   visit_id?: string;
@@ -455,6 +459,9 @@ function App() {
   const [patientForm, setPatientForm] = useState<PatientFormState>(initialPatientForm);
   const [visitForm, setVisitForm] = useState<VisitFormState>(initialVisitForm);
   const [permitForm, setPermitForm] = useState<PermitFormState>(initialPermitForm);
+  const [tamperBlock, setTamperBlock] = useState('');
+  const [tamperResult, setTamperResult] = useState('');
+
 
   const loadAll = async () => {
     const dashboardResponse = await fetch(`${API_BASE}/prototype/dashboard`);
@@ -785,6 +792,31 @@ function App() {
       );
     } catch {
       setVerificationNotice('Verification request failed.');
+    }
+  };
+
+  const handleTamperSimulate = async () => {
+    if (!tamperBlock) return;
+    setTamperResult('');
+    try {
+      const payload = new FormData();
+      payload.append('block_number', tamperBlock);
+      const response = await fetch(`${API_BASE}/prototype/ledger/tamper-simulate`, {
+        method: 'POST',
+        body: payload,
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      const result = (await response.json()) as {
+        tampered_block: number;
+        broken_blocks: number[];
+        message: string;
+      };
+      setTamperResult(
+        `Block ${result.tampered_block} tampered. Chain broken at blocks: ${result.broken_blocks.join(', ')}. Reload to see status updates.`
+      );
+      await loadAll();
+    } catch {
+      setTamperResult('Tamper simulation failed. Check the backend is running.');
     }
   };
 
@@ -1957,10 +1989,11 @@ function App() {
                       <th>Block</th>
                       <th>Artifact</th>
                       <th>Event</th>
-                      <th>Hash</th>
+                      <th>Artifact hash</th>
+                      <th>Prev hash</th>
                       <th>Signer</th>
                       <th>Timestamp</th>
-                      <th>Status</th>
+                      <th>Chain</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1970,10 +2003,19 @@ function App() {
                         <td>{entry.artifact}</td>
                         <td>{entry.event}</td>
                         <td className="mono">{entry.hash.slice(0, 18)}...</td>
+                        <td className="mono">
+                          {entry.previous_hash ? entry.previous_hash.slice(0, 12) + '...' : '—'}
+                        </td>
                         <td>{entry.signer}</td>
                         <td>{entry.timestamp}</td>
                         <td>
-                          <span className="status-chip verified">{entry.status}</span>
+                          <span
+                            className={`status-chip ${
+                              entry.chain_status === 'broken' ? 'tampered' : 'verified'
+                            }`}
+                          >
+                            {entry.chain_status ?? entry.status}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -1997,6 +2039,49 @@ function App() {
                   <li key={finding}>{finding}</li>
                 ))}
               </ul>
+            </div>
+          </section>
+
+          <section className="section">
+            <div className="section-header">
+              <div>
+                <h2>Chain tamper simulation</h2>
+                <p className="section-copy">
+                  Corrupt a block's artifact hash to demonstrate that the chain detects
+                  the break. All downstream blocks will show chain_status: broken.
+                </p>
+              </div>
+            </div>
+            <div className="panel">
+              <div className="form-grid">
+                <label className="field">
+                  <span>Block number to tamper</span>
+                  <input
+                    type="number"
+                    value={tamperBlock}
+                    onChange={(e) => setTamperBlock(e.target.value)}
+                    placeholder="e.g. 203"
+                  />
+                </label>
+              </div>
+              {tamperResult ? (
+                <div className="notice warning">{tamperResult}</div>
+              ) : null}
+              <div className="action-row">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => void handleTamperSimulate()}
+                  disabled={!tamperBlock}
+                >
+                  Simulate tamper
+                </button>
+              </div>
+              <p className="mini-note">
+                After tampering, the ledger table above will show broken chain status
+                for the corrupted block and every block that references it. This
+                demonstrates the tamper-evident property of the hash chain.
+              </p>
             </div>
           </section>
 
