@@ -927,14 +927,12 @@ function App() {
   return (
     <div className="page-shell">
       <header className="hero-card">
-        <div>
-          <span className="eyebrow">Interactive GSK challenge prototype</span>
+                <div>
           <h1>{data.prototype.name}</h1>
-          <p className="hero-copy">{data.prototype.subtitle}</p>
-          <p className="mini-note">
-            This version supports dataset submissions, structured HBV patient baseline entry,
-            longitudinal visit capture, SHA-256 artifact hashing, simulated ledger blocks, OMOP /
-            ETL reporting, and EHDS-style permit-gated secondary-use access.
+          <p className="hero-copy">
+            Secure dataset intake, patient and visit capture, SHA-256 ledger notarization,
+            EHDS-compliant opt-out filtering, and anonymization-gated result export for
+            bepirovirsen RWD studies.
           </p>
         </div>
         <div className="badge-row">
@@ -949,7 +947,7 @@ function App() {
       {error ? <div className="notice warning">{error}</div> : null}
       {notice ? <div className="notice success">{notice}</div> : null}
       {verificationNotice ? <div className="notice">{verificationNotice}</div> : null}
-      {loading ? <div className="notice">Loading prototype dashboard...</div> : null}
+      {loading ? <div className="notice">Loading dashboard...</div> : null}
 
       <section className="section">
         <div className="section-header">
@@ -982,25 +980,25 @@ function App() {
               <strong>{data.permit_gate.banner}</strong>
             </div>
 
-            {data.permit_gate.active_permit ? (
-              <div className="omop-meta">
-                <div className="feed-meta-row">
+                        {data.permit_gate.active_permit ? (
+              <div className="permit-detail-grid">
+                <div className="permit-detail-cell">
                   <span>Permit ID</span>
                   <strong>{data.permit_gate.active_permit.permit_id}</strong>
                 </div>
-                <div className="feed-meta-row">
-                  <span>Requesting organisation</span>
+                <div className="permit-detail-cell">
+                  <span>Organisation</span>
                   <strong>{data.permit_gate.active_permit.requesting_organization}</strong>
                 </div>
-                <div className="feed-meta-row">
-                  <span>Purpose code</span>
+                <div className="permit-detail-cell">
+                  <span>Purpose</span>
                   <strong>{data.permit_gate.active_permit.purpose_code}</strong>
                 </div>
-                <div className="feed-meta-row">
-                  <span>Expiry date</span>
+                <div className="permit-detail-cell">
+                  <span>Expiry</span>
                   <strong>{data.permit_gate.active_permit.expiry_date}</strong>
                 </div>
-                <div className="feed-meta-row">
+                <div className="permit-detail-cell permit-detail-full">
                   <span>Issuing HDAB</span>
                   <strong>{data.permit_gate.active_permit.issuing_hdab}</strong>
                 </div>
@@ -1028,7 +1026,7 @@ function App() {
               <div>
                 <h2>Register permit</h2>
                 <p className="section-copy">
-                  Create a simulated secondary-use data access permit to unlock the dashboard.
+                  Register a secondary-use data access permit to activate the dashboard.
                 </p>
               </div>
             </div>
@@ -2219,8 +2217,7 @@ function App() {
                 <div>
                   <h2>ETL run context</h2>
                   <p className="section-copy">
-                    Current target model, ETL configuration, and known gaps before analysis-grade
-                    use.
+                    Current target model, ETL configuration, and mapping status.
                   </p>
                 </div>
               </div>
@@ -2262,7 +2259,7 @@ function App() {
               <div>
                 <h2>Data lifecycle flow</h2>
                 <p className="section-copy">
-                  This reflects actual runtime behavior in the prototype.
+                  This reflects the current ETL runtime state.
                 </p>
               </div>
             </div>
@@ -2746,50 +2743,6 @@ function App() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          </section>
-
-          <section className="section two-column">
-            <div className="panel">
-              <div className="section-header compact">
-                <div>
-                  <h2>Readiness matrix</h2>
-                  <p className="section-copy">
-                    Computed from the current data in the prototype store.
-                  </p>
-                </div>
-              </div>
-              <div className="readiness-grid">
-                {data.trial_readiness.map((item) => (
-                  <article key={item.criterion} className="readiness-card">
-                    <div className="readiness-topline">
-                      <strong>{item.criterion}</strong>
-                      <span
-                        className={`status-chip ${
-                          item.status === 'Pass' ? 'verified' : 'monitor'
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
-                    <p>{item.detail}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="panel">
-              <div className="section-header compact">
-                <div>
-                  <h2>Next steps</h2>
-                  <p className="section-copy">Logical upgrades after the prototype round.</p>
-                </div>
-              </div>
-              <ol className="next-step-list">
-                {data.next_steps.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ol>
             </div>
           </section>
         </>

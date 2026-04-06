@@ -270,8 +270,8 @@ button:disabled {
   font-weight: 800;
 }
 
-.kpi-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.form-grid {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .kpi-card {
@@ -553,4 +553,129 @@ button:disabled {
   .clinical-section {
     border-radius: 18px;
   }
+}
+
+/* ── Feed cards ── */
+.feed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.feed-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.feed-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.feed-topline h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.feed-note {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.feed-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.feed-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feed-metric span {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.feed-metric strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.feed-meta {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feed-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.feed-meta-row span {
+  color: var(--muted);
+}
+
+.feed-meta-row strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── OMOP ETL meta table ── */
+.omop-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+/* ── Permit detail grid ── */
+.permit-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.permit-detail-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.permit-detail-cell span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.permit-detail-cell strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.permit-detail-full {
+  grid-column: 1 / -1;
 }
